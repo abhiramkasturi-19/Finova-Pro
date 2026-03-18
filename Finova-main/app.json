@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Finova",
+    "slug": "Finova",
+    "version": "2.5.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.abhiramkasturi19.Finova"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4731b222-486b-4391-92ec-f3282b723762"
+      }
+    }
+  }
+}
