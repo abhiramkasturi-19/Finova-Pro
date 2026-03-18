@@ -166,8 +166,8 @@ const makeStyles = (colors) => StyleSheet.create({
 
   // Header
   header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
-  greeting:     { fontSize: 13, color: colors.textMuted, fontFamily: fonts.regular },
-  username:     { fontSize: 22, color: colors.textPrimary, fontFamily: fonts.heavy },
+  greeting:     { fontSize: 15, color: colors.textMuted, fontFamily: fonts.regular },
+  username:     { fontSize: 25, color: colors.textPrimary, fontFamily: fonts.heavy },
 
   // Avatar — circular, 44px
   avatarWrap:     { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },

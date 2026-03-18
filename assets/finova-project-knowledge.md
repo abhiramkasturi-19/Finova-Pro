@@ -59,7 +59,7 @@
 - Log Out with optional data download before clearing
 
 ### Current App Version
-**2.6.0 — Account System, Login & Profile Picture**
+**2.7.0 — Transitions, Animations & UX Polish**
 
 ---
 
@@ -89,11 +89,7 @@
 }
 ```
 
-**Install command for v2.6 additions:**
-```bash
-npx expo install expo-image-picker
-```
-`expo-document-picker`, `expo-file-system`, and `expo-sharing` were already present from v2.5.
+> ⚠️ `@react-navigation/bottom-tabs` is still installed as a dependency but is **no longer used**. `MainTabs` is now a fully custom animated component in `App.js`. The package can be removed in a future cleanup.
 
 ---
 
@@ -201,85 +197,92 @@ Custom categories are assigned unique colors from a 25-color **DESIGNER_PALETTE*
 
 ## 10. SCREEN SPECIFICATIONS
 
-### 10.1 WelcomeScreen *(updated — v2.6)*
+### 10.1 WelcomeScreen *(unchanged — v2.6)*
 **File:** `src/screens/WelcomeScreen.js`
 
 - Full-screen `splash-icon.png` as `ImageBackground`
-- Smooth SVG `LinearGradient` (via `react-native-svg`) from transparent at top to solid black at bottom — no more stacked View shadow layers
-- Content block pinned to bottom contains:
+- Smooth SVG `LinearGradient` from transparent at top to solid black at bottom
+- Content block pinned to bottom:
   - **"Finova"** headline — `Fungis-Heavy` 58px white
   - **Tagline** — `Fungis-Bold` 19px sage
-  - **Decorative lines row** — thin sage line / rotated diamond / thin sage line
-  - **Sub-headline** — `Fungis-Regular` 15px muted white
+  - Decorative lines row (thin sage line / rotated diamond / thin sage line)
+  - Sub-headline — `Fungis-Regular` 15px muted white
   - **"Get Started" button** (sage fill) → navigates to `CreateAccount`
   - **"Log In" button** (outlined, sage border) → navigates to `Login`
-  - **Login hint text** — `"Can only log in if you have a backup data JSON file."`
+  - Login hint text
 - No back button — this is the root screen
 
-### 10.2 LoginScreen *(NEW — v2.6)*
+### 10.2 LoginScreen *(unchanged — v2.6)*
 **File:** `src/screens/LoginScreen.js`
 
-- Same `splash-icon.png` background under a near-opaque overlay (`rgba(0,0,0,0.92–0.96)`)
-- Back button top-left → `navigation.goBack()`
-- Lock icon (🔐) in a frosted circular badge
-- **Title:** "Log In" + sage accent underline
-- Body paragraph explaining backup restore
-- **Callout card** (frosted, sage border) — contains the requirement: _"Can only log in if you have a backup data JSON file downloaded from Settings → Data Management."_
-- Hint linking back to Create Account
-- **"Upload Backup File" button** — uses `expo-document-picker` to pick a `.json` file, reads with `expo-file-system`, validates that `data.transactions` is an array and `data.settings` exists, calls `importData(data)`, sets `hasOnboarded: 'true'`, resets nav to `Main`
-- Shows `ActivityIndicator` while processing
-- Error alerts for invalid or unreadable files
+- `splash-icon.png` background + near-opaque overlay
+- Back button top-left → `navigation.goBack()` (slides right-to-left back)
+- Lock icon 🔐, title, body, callout card, hint
+- **"Upload Backup File" button** — `expo-document-picker` picks `.json`, validates, calls `importData()`, sets `hasOnboarded: 'true'`, resets nav to `Main`
+- ActivityIndicator while processing
 
-### 10.3 CreateAccountScreen *(updated — v2.6)*
+### 10.3 CreateAccountScreen *(unchanged — v2.6)*
 **File:** `src/screens/CreateAccountScreen.js`
 
-- Same layout as v2.5, with one addition at the top of the form: **Profile Picture**
-- Circular avatar (80px) with a camera badge overlay
-  - If no photo: shows initials from the username field, updating live as user types
-  - If photo picked: shows the cropped image
-  - Tapping opens `expo-image-picker` gallery picker, `aspect [1,1]`, `quality 0.45`, `base64: true`
-  - Image stored as `data:image/jpeg;base64,...` string
-- On Continue: calls `updateSettings({ name, age, darkMode, currency, profileImage })`
-- Profile picture is optional — user can skip and add later in Settings
+- Profile Picture upload at top (circular avatar, camera badge, `expo-image-picker`)
+- Username, Age, Theme chip selector, Currency chip selector
+- Terms checkbox
+- Continue → `updateSettings({ name, age, darkMode, currency, profileImage })` → navigates to `DataInfo`
 
 ### 10.4 DataInfoScreen *(unchanged — v2.5)*
 **File:** `src/screens/DataInfoScreen.js`
-- Data management explainer (Export / Import / Delete cards)
-- "Enter Finova →" saves `hasOnboarded: 'true'` and resets nav to `Main`
+- Data management explainer cards
+- "Enter Finova →" saves `hasOnboarded: 'true'`, resets nav to `Main`
 
-### 10.5 SettingsScreen *(updated — v2.6)*
+### 10.5 AppGuideScreen *(NEW — v2.6)*
+**File:** `src/screens/AppGuideScreen.js`
+
+- Accessed from Settings → App Guide
+- Opens as a **pan-down modal** (`presentation: 'modal'`, `slide_from_bottom`)
+- `splash-icon.png` background + `rgba(0,0,0,0.88)` overlay
+- ScrollView of 10 guide sections (numbered cards)
+- Back button top-left → `navigation.goBack()` — slides DOWN (modal reverse)
+- Footnote: `Finova v2.7.0 · All data stored locally.`
+
+### 10.6 SettingsScreen *(updated — v2.7)*
 **File:** `src/screens/SettingsScreen.js`
 
-**Profile Card — combined view + edit (replaces separate PROFILE section):**
-- **View mode** (default):
-  - Shows circular avatar — real photo if `settings.profileImage` is set, otherwise initial letter on sage background
-  - Shows display name and meta line (age + currency)
-  - Below the info: a pen SVG icon + "Edit Profile" label — tapping opens edit mode
-- **Edit mode** (inline, same card):
-  - "Edit Profile" title
-  - Tappable avatar with camera badge → `expo-image-picker` to change photo
-  - "Tap photo to change" hint
-  - Name `TextInput`
-  - Age `TextInput`
-  - **Save** button (sage) — commits changes via `updateSettings`, closes edit mode
-  - **Cancel** button (outlined) — discards changes, closes edit mode
-- The old standalone PROFILE section with always-visible TextInputs has been removed
+**Profile Card:**
+- **View mode:** avatar, name, meta (age + currency), "Edit Profile" pen icon
+- **Edit mode (v2.7 change):** Name input, Age input, **Currency chip selector** (moved here from Preferences), profile photo picker
+- Saving commits name, age, profileImage, and currency all at once via `updateSettings()`
 
-**Preferences section** — Dark Mode toggle + Currency chips (unchanged)
+**Preferences section (v2.7 change):** Dark Mode toggle **only** — currency has been moved into Edit Profile.
 
-**Data Management section** — collapsible, unchanged (Download / Upload / Clear All)
+**Data Management:** collapsible, Download / Upload / Clear All (unchanged)
 
-**App section** — Version number only. **"Coming Soon" row removed.**
+**App section:** Version `2.7.0`, App Guide link (opens pan-down modal)
 
-**Log Out button** — full-width outlined button in wine red at the bottom of the screen:
-- Tapping shows a 3-option Alert:
-  1. **Download & Log Out** — exports full JSON backup via `expo-sharing`, then clears AsyncStorage and resets nav to `Welcome`
-  2. **Log Out Without Saving** — clears AsyncStorage and resets nav to `Welcome` immediately
-  3. **Cancel** — dismisses
-- `navigation` prop is required — passed automatically by the Tab navigator
+**Log Out button:** wine red at bottom — 3-option alert (Download & Log Out / Log Out Without Saving / Cancel)
 
-### 10.6 AddTransactionScreen *(unchanged — v2.2)*
-- Collapsible Date & Time, category chips, thousand-separator amount input
+### 10.7 AddTransactionScreen *(updated — v2.7)*
+**File:** `src/screens/AddTransactionScreen.js`
+
+- Opens as a **pan-down modal** (slides up from bottom, swipe down or X to close)
+- **Drag handle pill** at very top (44×4px, `colors.border`)
+- **Header row:** title left, **X close button** right (34×34 circle, calls `navigation.goBack()`)
+- Both X button and Record Expense/Income button call `navigation.goBack()` after saving — both slide the screen DOWN because `presentation: 'modal'` is set
+- Collapsible Date & Time section (unchanged)
+- Category chips with spring press animation
+- Thousand-separator amount input
+
+### 10.8 HomeScreen *(unchanged — v2.6)*
+### 10.9 ActivityScreen *(updated — v2.7)*
+**File:** `src/screens/ActivityScreen.js`
+
+- Period filter pills (Week/Month/Quarter/Annual) — **AnimPill** spring-press animation
+- Calendar mode selector (Daily/Monthly/Yearly) — **AnimPill** spring-press animation
+- **Calendar mode button fix (v2.7):** `calModeRow` now uses `gap: 8`, `padding: 6`, each button has `paddingVertical: 10`, `paddingHorizontal: 8`, `minHeight: 40`, `fontSize: 13` — properly spaced and tappable
+
+### 10.10 StatsScreen *(updated — v2.7)*
+**File:** `src/screens/StatsScreen.js`
+
+- Period filter pills (Week/Month/3 Month/6 Month/Year) — **AnimPill** spring-press animation
 
 ---
 
@@ -293,16 +296,14 @@ Custom categories are assigned unique colors from a 25-color **DESIGNER_PALETTE*
 {
   transactions: [],
   settings: {
-    name:         '',    // username
-    age:          '',    // user age
-    currency:     '₹',  // symbol string — not code
+    name:         '',
+    age:          '',
+    currency:     '₹',   // symbol — not code. Updated in Edit Profile (v2.7)
     darkMode:     false,
-    profileImage: '',    // base64 data URI — e.g. "data:image/jpeg;base64,..."
-                         // empty string when no photo set
-                         // included in JSON export/import automatically
+    profileImage: '',     // base64 data URI
   },
   customCategories: {
-    expense: [],         // { name, color }
+    expense: [],          // { name, color }
     income:  [],
   },
 }
@@ -314,29 +315,18 @@ Custom categories are assigned unique colors from a 25-color **DESIGNER_PALETTE*
 | Add transaction | `addTransaction(txn)` | Auto-generates id |
 | Edit transaction | `editTransaction(txn)` | Matches by id |
 | Delete transaction | `deleteTransaction(id)` | |
-| Update settings | `updateSettings(partial)` | Merges — used by onboarding and Settings |
+| Update settings | `updateSettings(partial)` | Merges — used by onboarding, Settings edit, and currency change |
 | Toggle dark mode | `toggleDarkMode()` | Shorthand flip |
 | Add custom category | `addCustomCategory(type, name)` | Auto-assigns unique color |
 | Delete custom category | `deleteCustomCategory(type, name)` | |
 | Import data | `importData(data)` | Full LOAD_DATA replace — used by Login and Upload |
 
-### LOAD_DATA Reducer (v2.6 change)
-The `LOAD_DATA` case now safely deep-merges `settings` so that `profileImage` (and any future settings fields) are preserved even when importing an older backup that doesn't include them:
-```js
-settings: {
-  ...initialState.settings,  // defaults
-  ...state.settings,         // current device state
-  ...(action.payload.settings || {}),  // imported values override
-}
-```
-
 ### Persistence
-- App data → AsyncStorage key `@flo_data` (includes `settings.profileImage`)
+- App data → AsyncStorage key `@flo_data`
 - Onboarding flag → AsyncStorage key `hasOnboarded` (string `'true'`)
 - On logout → `AsyncStorage.clear()` wipes both keys
 
 ### JSON Backup File Format
-The exported `.json` file contains the complete state:
 ```json
 {
   "transactions": [...],
@@ -353,80 +343,178 @@ The exported `.json` file contains the complete state:
   }
 }
 ```
-This file is used for both **Login** (full restore on a new device) and **Upload Data** in Settings (restore on the same device).
 
 ---
 
-## 12. APP.JS ARCHITECTURE *(updated — v2.6)*
+## 13. APP.JS ARCHITECTURE *(updated — v2.7)*
 
-### Onboarding Gate
-Reads `hasOnboarded` from AsyncStorage on launch. SplashScreen held until both fonts and check complete.
+### No Branded Splash
+The custom `BrandedSplash` overlay was removed in v2.7. The native Expo splash screen (`splash-icon.png` from `app.json`) is shown while fonts load, then hidden immediately. No 2-second delay, no opacity bleed-through.
 
-### Navigation Structure
+### Tab Navigation — Custom Animated (replaces Tab.Navigator)
+`@react-navigation/bottom-tabs` Tab.Navigator has been **replaced entirely** with a hand-built animated tab system inside `MainTabs`:
+
 ```
-Stack.Navigator (root, headerShown: false, animation: 'fade')
+MainTabs (custom component)
+├── Screens rendered with StyleSheet.absoluteFillObject
+│   └── display:'none' when inactive (fully removes from render tree)
+│   └── Animated.spring translateX on active screen only
+├── CustomTabBar (floating pill bar)
+│   └── zIndex:100 + elevation:100 — always on top on Android
+```
+
+**Directional slide logic:**
+- Tap a tab to the **right** of current → new screen slides in from the **right**
+- Tap a tab to the **left** of current → new screen slides in from the **left**
+- Spring physics: `damping: 24`, `stiffness: 220`, `mass: 0.85`
+
+**Why `display:'none'` instead of `pointerEvents:'none'`:**
+`pointerEvents:'none'` only disables touch — the screen still paints on top of the tab bar, hiding it. `display:'none'` removes the screen from the render tree completely.
+
+**Why `elevation:100` on the tab bar wrapper:**
+On Android, elevation controls z-order between Views in the same stacking context. Without it, any View with a non-zero elevation (like screen content) can overlap the tab bar even if rendered later in the tree.
+
+### Stack Navigation Structure
+```
+Stack.Navigator (root, default: slideRight, headerShown: false)
 │
-├── [isOnboarded === true — returning user]
-│   ├── Main             → MainTabs
-│   ├── AddTransaction   → AddTransactionScreen (modal)
-│   ├── Welcome          → WelcomeScreen   ← kept here so logout reset works
-│   ├── CreateAccount    → CreateAccountScreen
-│   ├── DataInfo         → DataInfoScreen
-│   └── Login            → LoginScreen
+├── [isOnboarded === true]
+│   ├── Main             → MainTabs           (fadeIn)
+│   ├── AddTransaction   → AddTransactionScreen (panDownModal)
+│   ├── Welcome          → WelcomeScreen       (slideRight) ← needed for logout reset
+│   ├── CreateAccount    → CreateAccountScreen (slideRight)
+│   ├── DataInfo         → DataInfoScreen      (slideRight)
+│   ├── Login            → LoginScreen         (slideRight)
+│   └── AppGuide         → AppGuideScreen      (panDownModal)
 │
-└── [isOnboarded === false — first launch]
-    ├── Welcome          → WelcomeScreen
-    ├── CreateAccount    → CreateAccountScreen
-    ├── DataInfo         → DataInfoScreen
-    ├── Login            → LoginScreen
-    ├── Main             → MainTabs
-    └── AddTransaction   → AddTransactionScreen (modal)
+└── [isOnboarded === false]
+    ├── Welcome          → WelcomeScreen       (fadeIn)
+    ├── CreateAccount    → CreateAccountScreen (slideRight)
+    ├── DataInfo         → DataInfoScreen      (slideRight)
+    ├── Login            → LoginScreen         (slideRight)
+    ├── Main             → MainTabs            (fadeIn)
+    ├── AddTransaction   → AddTransactionScreen (panDownModal)
+    └── AppGuide         → AppGuideScreen      (panDownModal)
 ```
 
-> **Why onboarding screens are in both branches:** `SettingsScreen.handleLogout` calls `navigation.reset({ routes: [{ name: 'Welcome' }] })`. For this to work when the user is already in the app (returning-user branch), `Welcome` must be registered in that branch too.
+### Transition Presets
 
-### MainTabs (Tab.Navigator)
-```
-Tab.Navigator (CustomTabBar)
-├── Home     → HomeScreen
-├── Activity → ActivityScreen
-├── Stats    → StatsScreen
-└── Settings → SettingsScreen
+```js
+// All screens share this dark background during animation — kills white flash
+const DARK = { contentStyle: { backgroundColor: '#111' } };
+
+// Standard — all stack pushes (onboarding, guide, etc.)
+const slideRight = {
+  animation: 'slide_from_right',
+  animationDuration: 300,
+  gestureEnabled: true,
+  gestureDirection: 'horizontal',
+  ...DARK,
+};
+
+// Modal — AddTransaction and AppGuide
+// ⚠️ presentation:'modal' is REQUIRED on Android native stack.
+// Without it, slide_from_bottom is silently ignored and the screen appears instantly.
+// With it, goBack() correctly reverses to slide_to_bottom.
+const panDownModal = {
+  presentation: 'modal',
+  animation: 'slide_from_bottom',
+  animationDuration: 350,
+  gestureEnabled: true,
+  gestureDirection: 'vertical',
+  ...DARK,
+};
+
+// Fade — used for the Main screen on first entry after onboarding/login
+const fadeIn = {
+  animation: 'fade',
+  animationDuration: 280,
+  ...DARK,
+};
+
+const noAnim = {
+  animation: 'none',
+  ...DARK,
+};
 ```
 
 ---
 
-## 13. NAVIGATION STRUCTURE
+## 14. NAVIGATION STRUCTURE *(updated — v2.7)*
 
-### Screen Registry *(updated — v2.6)*
-| Screen Name | File | Stack |
-|---|---|---|
-| `Welcome` | `src/screens/WelcomeScreen.js` | Root Stack (both branches) |
-| `CreateAccount` | `src/screens/CreateAccountScreen.js` | Root Stack (both branches) |
-| `DataInfo` | `src/screens/DataInfoScreen.js` | Root Stack (both branches) |
-| `Login` | `src/screens/LoginScreen.js` | Root Stack (both branches) |
-| `Main` | MainTabs component | Root Stack |
-| `AddTransaction` | `src/screens/AddTransactionScreen.js` | Root Stack (modal) |
-| `Home` | `src/screens/HomeScreen.js` | Tab |
-| `Activity` | `src/screens/ActivityScreen.js` | Tab |
-| `Stats` | `src/screens/StatsScreen.js` | Tab |
-| `Settings` | `src/screens/SettingsScreen.js` | Tab |
+### Screen Registry
+| Screen Name | File | Transition | Notes |
+|---|---|---|---|
+| `Welcome` | `src/screens/WelcomeScreen.js` | noAnim | Instant appearance on root or logout |
+| `CreateAccount` | `src/screens/CreateAccountScreen.js` | slideRight | |
+| `DataInfo` | `src/screens/DataInfoScreen.js` | slideRight | |
+| `Login` | `src/screens/LoginScreen.js` | slideRight | |
+| `Main` | MainTabs (App.js) | fadeIn | Custom animated tabs |
+| `AddTransaction` | `src/screens/AddTransactionScreen.js` | panDownModal | Slides up, X/Record/swipe-down to close |
+| `AppGuide` | `src/screens/AppGuideScreen.js` | panDownModal | Slides up, Back/swipe-down to close |
+| `Home` | `src/screens/HomeScreen.js` | spring slide | Inside MainTabs |
+| `Activity` | `src/screens/ActivityScreen.js` | spring slide | Inside MainTabs |
+| `Stats` | `src/screens/StatsScreen.js` | spring slide | Inside MainTabs |
+| `Settings` | `src/screens/SettingsScreen.js` | spring slide | Inside MainTabs |
 
 ### Full Navigation Flows
 ```
 First launch:
-  Welcome → CreateAccount → DataInfo → [reset] → Main
+  Welcome (fade) → CreateAccount (slide) → DataInfo (slide) → [reset] → Main (fade)
 
 Login (existing account):
-  Welcome → Login → [upload JSON] → [reset] → Main
+  Welcome → Login (slide) → [upload JSON] → [reset] → Main (fade)
 
 Log Out (from Settings):
   Settings → [Alert] → [AsyncStorage.clear()] → [reset] → Welcome
 
-Back navigation:
-  CreateAccount ← goBack() ← DataInfo
-  Login ← goBack() ← (back to Welcome)
+AddTransaction open/close:
+  Any tab → AddTransaction (slides UP) → X or Record → slides DOWN back
+
+AppGuide open/close:
+  Settings → AppGuide (slides UP) → Back → slides DOWN back
+
+Back navigation (stack):
+  CreateAccount ← goBack() (slides right)
+  Login ← goBack() (slides right)
 ```
+
+---
+
+## 15. COMPONENT SPECIFICATIONS
+
+### AnimPill *(NEW — v2.7)*
+Used in `ActivityScreen.js` and `StatsScreen.js` for filter/mode selectors.
+
+```js
+function AnimPill({ onPress, isActive, style, activeStyle, textStyle, activeTextStyle, label }) {
+  // Spring press: scale 1 → 0.88 on pressIn, 0.88 → 1 with bounce on pressOut
+  // damping/stiffness tuned so pressIn is instant, pressOut has a small spring back
+}
+```
+Props: `onPress`, `isActive`, `style`, `activeStyle`, `textStyle`, `activeTextStyle`, `label`
+
+### CustomTabBar *(updated — v2.7)*
+- Receives `activeTab` (index), `onNavigate` (callback), `navigation` (stack nav for AddTransaction)
+- No longer uses React Navigation's tab state — fully decoupled
+- `tb.wrapper`: `position:'absolute'`, `zIndex:100`, **`elevation:100`** (Android z-order fix)
+- Center + button navigates to `AddTransaction` via `navigation.navigate('AddTransaction')`
+
+### DonutChart
+Unchanged. Located at `src/components/DonutChart.js`.
+
+---
+
+## 18. ALL ERRORS & FIXES (complete log)
+
+| Error | Cause | Fix |
+|---|---|---|
+| Navigator crash: "A navigator can only contain Screen/Group/Fragment" | JSX comment `{/* */}` inside Stack.Navigator | Remove all JSX comments from inside navigator blocks |
+| Tab bar invisible on Android | Screens using `absoluteFillObject` with `pointerEvents:'none'` still painted over the tab bar | Changed to `display:'none'` for inactive screens; added `elevation:100` + `zIndex:100` to tab bar wrapper |
+| `slide_from_bottom` ignored (screen appears instantly) | `presentation:'modal'` was removed from `panDownModal` config | Added `presentation:'modal'` back — it is required on Android native stack for the animation to fire |
+| White flash on back navigation | Navigator background was transparent during transition frames | Added `contentStyle: { backgroundColor: '#111' }` to all screen options |
+| Tab bar hidden by extra wrapper View | `<View style={{ zIndex:99 }}>` wrapped tab bar, breaking its absolute `bottom` positioning | Removed the wrapper; elevation on `tb.wrapper` itself is sufficient |
+| goBack() from X button didn't animate | panDownModal had no `presentation:'modal'` | Restored `presentation:'modal'` — goBack() now correctly reverses to slide_to_bottom |
 
 ---
 
@@ -469,12 +557,26 @@ Back navigation:
 | 81 | Added profile picture picker (camera badge tap) in Settings edit mode | SettingsScreen.js |
 | 82 | Removed standalone PROFILE section (name/age TextInputs) from Settings | SettingsScreen.js |
 | 83 | Removed "Coming Soon" row from APP section in Settings | SettingsScreen.js |
-| 84 | Added **Log Out button** (wine red, outlined) to bottom of Settings | SettingsScreen.js |
+| 84 | Added **Log Out button** (wine red) to bottom of Settings | SettingsScreen.js |
 | 85 | Log Out alert: Download & Log Out / Log Out Without Saving / Cancel | SettingsScreen.js |
 | 86 | Log Out clears AsyncStorage and resets nav to Welcome | SettingsScreen.js |
 | 87 | Added all onboarding screens to returning-user Stack branch so logout reset works | App.js |
-| 88 | Fixed navigator crash caused by JSX comment (`{/* */}`) inside Stack.Navigator | App.js |
+| 88 | Fixed navigator crash caused by JSX comment inside Stack.Navigator | App.js |
 | 89 | Bumped version to 2.6.0 | SettingsScreen.js |
+| 90 | Removed branded splash overlay — native Expo splash only, no 2s delay or opacity bleed | App.js |
+| 91 | Replaced Tab.Navigator with custom `MainTabs` — directional spring slide between tabs | App.js |
+| 92 | Tab slide direction: right-of-current → slides from right; left-of-current → slides from left | App.js |
+| 93 | Added `contentStyle: { backgroundColor: '#111' }` to all stack screens — fixes white flash on back | App.js |
+| 94 | AddTransaction: removed ✕ close button, replaced with drag handle pill only (then reverted in 97) | AddTransactionScreen.js |
+| 95 | AddTransaction/AppGuide: `presentation:'modal'` + `slide_from_bottom` + `gestureDirection:'vertical'` | App.js |
+| 96 | Fixed tab bar invisible on Android — `display:'none'` for inactive screens, `elevation:100` on wrapper | App.js |
+| 97 | Restored ✕ close button on AddTransactionScreen header (drag handle pill kept at top as well) | AddTransactionScreen.js |
+| 98 | Confirmed `presentation:'modal'` is required for `slide_from_bottom` to animate on Android native stack | App.js |
+| 99 | Added **AnimPill** spring-press component to ActivityScreen and StatsScreen for filter/mode selectors | ActivityScreen.js, StatsScreen.js |
+| 100 | Fixed Activity calendar mode buttons (Daily/Monthly/Yearly) — proper spacing, padding, tap targets | ActivityScreen.js |
+| 101 | Moved **Currency** from Preferences into Edit Profile card in Settings | SettingsScreen.js |
+| 102 | Preferences section now contains Dark Mode only | SettingsScreen.js |
+| 103 | Bumped version to 2.7.0 | SettingsScreen.js |
 
 ---
 
@@ -491,6 +593,20 @@ npx expo start
 await AsyncStorage.removeItem('hasOnboarded');
 ```
 
+### 🛑 Tab Bar Not Visible
+The tab bar wrapper must have both `zIndex: 100` AND `elevation: 100`. On Android, elevation controls z-order between Views — without it, screen content (even with display:'flex') can render above the tab bar in the compositing pass.
+
+Inactive screens must use `display: 'none'`, not `pointerEvents: 'none'`. `pointerEvents:'none'` only disables touch — the screen still paints and covers the tab bar.
+
+### 🛑 AddTransaction / AppGuide Opens Without Animation (Appears Instantly)
+`presentation: 'modal'` must be present in the screen options. On Android's native stack, `slide_from_bottom` without `presentation: 'modal'` is silently ignored. The screen will appear and disappear with no animation.
+
+### 🛑 goBack() Does Not Animate (Snaps Closed)
+Same as above — `presentation: 'modal'` must be set. With it, `goBack()` correctly reverses to slide_to_bottom. Without it, `goBack()` snaps the screen off instantly.
+
+### 🛑 White Flash During Navigation
+All screen options must include `contentStyle: { backgroundColor: '#111' }`. This sets the navigator background to near-black so the brief animation frame before screen content paints is dark, not white.
+
 ### 🛑 Troubleshooting Logo/Asset Caching
 1. `npx expo start --clear`
 2. Android: Long-press Expo Go > App Info > Storage > Clear Cache
@@ -501,33 +617,38 @@ Keys must be exactly `'Fungis-Heavy'`, `'Fungis-Bold'`, `'Fungis-Regular'`. Any 
 
 ### 🛑 Troubleshooting Navigator Crash
 **Error:** `A navigator can only contain 'Screen', 'Group' or 'React.Fragment' as its direct children`
-**Cause:** JSX comment `{/* ... */}` placed directly inside a `Stack.Navigator` or `Tab.Navigator`. React Navigation treats it as an invalid child node.
-**Fix:** Remove all inline JSX comments from inside navigator blocks. Move comments to lines above `<Stack.Screen>` elements if needed.
+**Cause:** JSX comment `{/* ... */}` placed directly inside a `Stack.Navigator`.
+**Fix:** Remove all inline JSX comments from inside navigator blocks.
 
-### 🛑 Troubleshooting Profile Image Not Showing After Login
-If a user logs in via backup JSON and their profile photo doesn't appear, check that the exported JSON contains `settings.profileImage`. If the backup was made before v2.6, it won't have this field — the `LOAD_DATA` reducer will default to `''` (no photo) which is correct behaviour.
+### 🛑 Profile Image Not Showing After Login
+Backup made before v2.6 won't have `settings.profileImage`. The `LOAD_DATA` reducer defaults to `''` — correct behaviour. Nothing to fix.
 
 ---
 
 ## 24. CRITICAL RULES FOR ANY AGENT
 
-1. **Font keys are `Fungis-*` not `FUNGIS-*`** — always lowercase `ungis`, capital `F`, hyphen separator.
+1. **Font keys are `Fungis-*` not `FUNGIS-*`** — capital F, lowercase ungis, hyphen separator.
 2. **Asset path from screens** is `../../assets/` (screens at `src/screens/`, assets at root).
-3. **Currency in AppContext** is stored as symbol (`₹`, `$`, `€`, `£`, `¥`), not a code.
+3. **Currency in AppContext** is stored as symbol (`₹`, `$`, `€`, `£`, `¥`), not a code. Updated via `updateSettings({ currency })` inside Edit Profile, not Preferences.
 4. **`useApp()`** is the hook — not `useContext(AppContext)`. Import from `../context/AppContext`.
 5. **Onboarding flag** → AsyncStorage key `'hasOnboarded'` (string `'true'`). App data → `'@flo_data'`. Logout clears both via `AsyncStorage.clear()`.
-6. **No back button on WelcomeScreen** — it is the root entry point with nowhere to go back to.
-7. **`navigation.reset`** must be used (not `navigate`) when exiting onboarding or logging out — clears back stack.
+6. **No back button on WelcomeScreen** — it is the root entry point.
+7. **`navigation.reset`** must be used (not `navigate`) when exiting onboarding or logging out.
 8. **`updateSettings`** handles all profile fields: `name`, `age`, `darkMode`, `currency`, `profileImage`.
 9. **Onboarding and login screens are always dark** — hardcoded colors regardless of `settings.darkMode`.
-10. **All onboarding screens must be registered in both Stack branches** (`isOnboarded true` and `false`) because logout from inside the app calls `navigation.reset({ routes: [{ name: 'Welcome' }] })` and that screen must be reachable from the returning-user branch.
-11. **Never put JSX comments inside navigator blocks** — `{/* */}` is treated as an invalid child node by React Navigation and will crash the app.
-12. **`profileImage` is a base64 data URI string** stored in `settings`. It is included in the JSON backup automatically. When displaying: use `<Image source={{ uri: settings.profileImage }} />`. Always check it is non-empty before rendering.
-13. **JSON backup contains everything** — transactions, all settings (including profile image), and custom categories. It is the single source of truth for Login and Upload Data flows.
+10. **All onboarding screens must be registered in both Stack branches** because logout calls `navigation.reset({ routes: [{ name: 'Welcome' }] })` from inside the app.
+11. **Never put JSX comments inside navigator blocks** — crashes the app.
+12. **`profileImage` is a base64 data URI string** — check non-empty before rendering: `{profileImage ? <Image source={{ uri: profileImage }} /> : <Fallback />}`.
+13. **JSON backup contains everything** — transactions, settings (incl. profileImage), customCategories.
+14. **`presentation:'modal'` is required for `slide_from_bottom` on Android** — without it the screen appears/disappears instantly with no animation. Always include it for AddTransaction and AppGuide.
+15. **Tab bar must have `elevation:100` on Android** — this is the Android z-order mechanism. `zIndex` alone is not enough on Android.
+16. **Inactive tab screens use `display:'none'`** — not `pointerEvents:'none'`. Only `display:'none'` fully removes the screen from the render tree.
+17. **Tab.Navigator is NOT used** — MainTabs is a fully custom component in App.js. Do not add `createBottomTabNavigator` back.
+18. **`contentStyle: { backgroundColor: '#111' }` on all stack screens** — prevents white flash during slide transitions on dark-background screens.
 
 ---
 
 *Last updated: March 18, 2026*
 *Project: Finova Personal Finance App*
-*Version: 2.6.0 — Account System, Login & Profile Picture*
+*Version: 2.7.0 — Transitions, Animations & UX Polish*
 *Developer: Abhiram Kasturi*

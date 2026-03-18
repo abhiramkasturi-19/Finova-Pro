@@ -1,13 +1,14 @@
 // src/screens/AppGuideScreen.js
 // Finova v2.6 — In-app usage guide
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ImageBackground,
   TouchableOpacity, ScrollView, Dimensions, StatusBar,
+  Animated, BackHandler,
 } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const GUIDE_SECTIONS = [
   {
@@ -53,6 +54,38 @@ const GUIDE_SECTIONS = [
 ];
 
 export default function AppGuideScreen({ navigation }) {
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      damping: 26,
+      stiffness: 24,
+      mass: 0.9,
+    }).start();
+  }, []);
+
+  const handleClose = () => {
+    Animated.spring(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      useNativeDriver: true,
+      damping: 260,
+      stiffness: 2400,
+      mass: 1,
+    }).start(() => {
+      navigation.goBack();
+    });
+  };
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
+
   return (
     <View style={styles.root}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
@@ -62,11 +95,12 @@ export default function AppGuideScreen({ navigation }) {
         resizeMode="cover"
       >
         <View style={styles.fullOverlay} />
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <Animated.View style={{ flex: 1, transform: [{ translateY: slideAnim }] }}>
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.backBtn} onPress={handleClose}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
 
           <Text style={styles.title}>App Guide</Text>
           <View style={styles.titleAccent} />
@@ -90,6 +124,7 @@ export default function AppGuideScreen({ navigation }) {
           <Text style={styles.footnote}>Finova v2.6.0 · All data stored locally.</Text>
           <View style={{ height: 40 }} />
         </ScrollView>
+        </Animated.View>
       </ImageBackground>
     </View>
   );
@@ -97,7 +132,7 @@ export default function AppGuideScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#222629' },
-  bg:   { flex: 1, width, height },
+  bg:   { flex: 1, width, height: SCREEN_HEIGHT },
   fullOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.88)' },
   scroll: { paddingHorizontal: 28, paddingTop: 56, paddingBottom: 20 },
 

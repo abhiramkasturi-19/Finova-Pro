@@ -26,8 +26,17 @@
 - Use the `useApp()` hook to access global state and actions.
 - Actions include: `addTransaction`, `editTransaction`, `deleteTransaction`, `updateSettings`, `toggleDarkMode`, `importData`.
 - **Note:** `importData` (dispatching `LOAD_DATA`) replaces the entire state.
+- **Note:** `updateSettings` is used for profile fields (`name`, `age`, `profileImage`) as well as `currency`.
 
-### 2. Theming Rules (CRITICAL)
+### 2. Navigation & Layout (CRITICAL)
+- **Tab Navigation:** `Tab.Navigator` is **NOT** used. A custom `MainTabs` component (hand-built spring animated) in `App.js` manages tab rendering.
+- **Directional Slide:** Tab transitions use directional logic (right-of-current slides from right, etc.) with spring physics.
+- **Android Tab Fix:** The tab bar wrapper must have both `zIndex: 100` AND `elevation: 100` to prevent screen content from overlapping it.
+- **Inactive Screens:** Use `display: 'none'` (not `pointerEvents: 'none'`) to fully remove inactive tab screens from the render tree.
+- **White Flash Fix:** All stack screen options must include `contentStyle: { backgroundColor: '#111' }`.
+- **Modals:** `AddTransaction` and `AppGuide` use `presentation: 'modal'` + `slide_from_bottom`. **Strict Rule:** This is required for animations to work correctly on Android native stack.
+
+### 3. Theming Rules (CRITICAL)
 - **Strict Rule:** NEVER `import { colors }` from the theme file into a component for static `StyleSheet.create` calls.
 - **Strict Rule:** ALWAYS use the `makeStyles(colors)` pattern inside the component:
   ```javascript
@@ -39,15 +48,15 @@
   ```
 - All screens must have `paddingTop: 60` or more (e.g., `75` in `ActivityScreen`) to clear the Android status bar.
 
-### 3. Safe Area Handling
+### 4. Safe Area Handling
 - **Mandatory:** Always use `SafeAreaView` from `react-native-safe-area-context`. The standard `react-native` version is deprecated and causes layout issues.
 
-### 4. Date Handling
+### 5. Date Handling
 - **No Native Pickers:** `@react-native-community/datetimepicker` is avoided due to crashes on Android Expo Go.
 - Use manual text inputs (DD/MM/YYYY + HH:MM) as implemented in `AddTransactionScreen.js`.
 - **Home Screen:** Wallet date format is "FullMonth-Year : Present Month" (e.g., "March-26 : Present Month").
 
-### 5. Backup & Restore
+### 6. Backup & Restore
 - Implemented in `SettingsScreen.js` under a collapsible **Data Management** section.
 - Uses `expo-file-system/legacy` to avoid modern API deprecation errors in SDK 55.
 - Exports state (transactions, settings, custom categories) to `finova_backup.json`.
@@ -75,3 +84,4 @@
 - **Transaction Labels:** Use `getCat` helper and check for `customCategory` field when `category === 'others'`.
 - **Modals:** Ensure transaction detail modals include Edit and Delete actions.
 - **Amount Input:** Handle comma formatting (e.g., 5,000) for display, but strip commas before parsing/saving as a number.
+- **Animated Components:** Use `AnimPill` (spring-press) for interactive filter/mode selectors in `Activity` and `Stats` screens.

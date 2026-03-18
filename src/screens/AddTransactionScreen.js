@@ -327,7 +327,7 @@ export default function AddTransactionScreen({ navigation, route }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   safe:    { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingTop: spacing.xl + 15, paddingBottom: 60 },
+  content: { padding: spacing.lg, paddingTop: spacing.xl + 25, paddingBottom: 60 },
 
   header:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
   title:    { fontSize: 22, color: colors.textPrimary, fontFamily: fonts.heavy },

@@ -1,5 +1,5 @@
 // src/screens/SettingsScreen.js
-// Finova v2.6 — splash-icon background with theme-aware overlay
+// Finova v2.7 — currency in Edit Profile, removed from Preferences
 
 import React, { useState } from 'react';
 import {
@@ -53,27 +53,32 @@ export default function SettingsScreen({ navigation }) {
 
   const [showDataManager, setShowDataManager] = useState(false);
   const [editMode,        setEditMode        ] = useState(false);
-  const [editName,  setEditName ] = useState('');
-  const [editAge,   setEditAge  ] = useState('');
-  const [editImage, setEditImage] = useState('');
+  const [editName,        setEditName        ] = useState('');
+  const [editAge,         setEditAge         ] = useState('');
+  const [editImage,       setEditImage       ] = useState('');
+  const [editCurrency,    setEditCurrency    ] = useState('');   // NEW — currency in edit form
 
   const colors = settings.darkMode ? darkColors : lightColors;
-  // Dark mode: deep charcoal overlay keeps contrast high
-  // Light mode: very light warm tint — image stays clearly visible
   const overlayColor = settings.darkMode
     ? 'rgba(0,0,0,0.82)'
-    : 'rgba(44,51,32,0.55)';   // soft dark-olive tint, much lighter than before
+    : 'rgba(44,51,32,0.55)';
   const s = makeStyles(colors);
 
   const openEdit = () => {
-    setEditName(settings.name || '');
-    setEditAge(settings.age  || '');
+    setEditName(settings.name  || '');
+    setEditAge(settings.age    || '');
     setEditImage(settings.profileImage || '');
+    setEditCurrency(settings.currency  || '₹');
     setEditMode(true);
   };
 
   const saveEdit = () => {
-    updateSettings({ name: editName.trim(), age: editAge.trim(), profileImage: editImage });
+    updateSettings({
+      name:         editName.trim(),
+      age:          editAge.trim(),
+      profileImage: editImage,
+      currency:     editCurrency,
+    });
     setEditMode(false);
   };
 
@@ -107,9 +112,7 @@ export default function SettingsScreen({ navigation }) {
       } else {
         Alert.alert('Error', 'Sharing is not available on this device');
       }
-    } catch (err) {
-      Alert.alert('Error', 'Failed to generate backup file');
-    }
+    } catch { Alert.alert('Error', 'Failed to generate backup file'); }
   };
 
   const handleUpload = async () => {
@@ -135,7 +138,10 @@ export default function SettingsScreen({ navigation }) {
         text: 'Clear Everything', style: 'destructive',
         onPress: async () => {
           await AsyncStorage.clear();
-          dispatch({ type: 'LOAD_DATA', payload: { transactions: [], settings: { name: settings.name, age: settings.age, currency: settings.currency, darkMode: settings.darkMode, profileImage: settings.profileImage || '' } } });
+          dispatch({ type: 'LOAD_DATA', payload: {
+            transactions: [],
+            settings: { name: settings.name, age: settings.age, currency: settings.currency, darkMode: settings.darkMode, profileImage: settings.profileImage || '' },
+          }});
         },
       },
     ]);
@@ -143,14 +149,11 @@ export default function SettingsScreen({ navigation }) {
 
   const performLogout = async () => {
     await AsyncStorage.clear();
-    dispatch({
-      type: 'LOAD_DATA',
-      payload: {
-        transactions:     [],
-        settings:         { name: '', age: '', currency: '₹', darkMode: false, profileImage: '' },
-        customCategories: { expense: [], income: [] },
-      },
-    });
+    dispatch({ type: 'LOAD_DATA', payload: {
+      transactions:     [],
+      settings:         { name: '', age: '', currency: '₹', darkMode: false, profileImage: '' },
+      customCategories: { expense: [], income: [] },
+    }});
     navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
   };
 
@@ -168,12 +171,8 @@ export default function SettingsScreen({ navigation }) {
               const fileUri = FileSystem.cacheDirectory + 'finova_backup.json';
               await FileSystem.writeAsStringAsync(fileUri, data);
               const isAvailable = await Sharing.isAvailableAsync();
-              if (isAvailable) {
-                await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'Save your Finova backup before logging out', UTI: 'public.json' });
-              }
-            } catch (err) {
-              console.error('[Logout] Download failed:', err);
-            }
+              if (isAvailable) await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'Save your Finova backup before logging out', UTI: 'public.json' });
+            } catch (err) { console.error('[Logout] Download failed:', err); }
             await performLogout();
           },
         },
@@ -194,7 +193,6 @@ export default function SettingsScreen({ navigation }) {
         style={s.bg}
         resizeMode="cover"
       >
-        {/* Theme-aware overlay */}
         <View style={[s.overlay, { backgroundColor: overlayColor }]} />
 
         <SafeAreaView style={s.safe}>
@@ -229,6 +227,8 @@ export default function SettingsScreen({ navigation }) {
               {editMode && (
                 <>
                   <Text style={s.editModeTitle}>Edit Profile</Text>
+
+                  {/* Avatar */}
                   <TouchableOpacity style={s.editAvatarBtn} onPress={pickProfileImage} activeOpacity={0.8}>
                     {editImage
                       ? <Image source={{ uri: editImage }} style={s.editAvatarImg} />
@@ -240,12 +240,48 @@ export default function SettingsScreen({ navigation }) {
                   </TouchableOpacity>
                   <Text style={s.editAvatarHint}>Tap photo to change</Text>
 
+                  {/* Name */}
                   <Text style={s.editLabel}>NAME</Text>
-                  <TextInput style={s.editInput} value={editName} onChangeText={setEditName} placeholder="Your name" placeholderTextColor={colors.textMuted} autoCapitalize="words" maxLength={24} />
+                  <TextInput
+                    style={s.editInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Your name"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="words"
+                    maxLength={24}
+                  />
 
+                  {/* Age */}
                   <Text style={s.editLabel}>AGE</Text>
-                  <TextInput style={s.editInput} value={editAge} onChangeText={v => setEditAge(v.replace(/[^0-9]/g, ''))} placeholder="Your age" placeholderTextColor={colors.textMuted} keyboardType="number-pad" maxLength={3} />
+                  <TextInput
+                    style={s.editInput}
+                    value={editAge}
+                    onChangeText={v => setEditAge(v.replace(/[^0-9]/g, ''))}
+                    placeholder="Your age"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                  />
 
+                  {/* ── Currency — moved here from Preferences ── */}
+                  <Text style={s.editLabel}>CURRENCY</Text>
+                  <View style={s.currencyChipsRow}>
+                    {CURRENCIES.map(c => (
+                      <TouchableOpacity
+                        key={c.sym}
+                        style={[s.currencyChip, editCurrency === c.sym && s.currencyChipActive]}
+                        onPress={() => setEditCurrency(c.sym)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[s.currencyChipText, editCurrency === c.sym && s.currencyChipTextActive]}>
+                          {c.sym} {c.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Actions */}
                   <View style={s.editActions}>
                     <TouchableOpacity style={s.cancelBtn} onPress={cancelEdit} activeOpacity={0.8}>
                       <Text style={s.cancelBtnText}>Cancel</Text>
@@ -258,30 +294,21 @@ export default function SettingsScreen({ navigation }) {
               )}
             </View>
 
-            {/* ── Preferences ── */}
+            {/* ── Preferences — Dark Mode only (currency moved to Edit Profile) ── */}
             <Text style={s.sectionLabel}>PREFERENCES</Text>
             <View style={s.card}>
-              <View style={s.row}>
+              <View style={[s.row, { borderBottomWidth: 0 }]}>
                 <View style={[s.iconBox, { backgroundColor: colors.surface2 }]}><Text>🌙</Text></View>
                 <View style={s.rowInfo}>
                   <Text style={s.rowLabel}>Dark Mode</Text>
                   <Text style={s.rowHint}>{settings.darkMode ? 'On — dark olive theme' : 'Off — warm cream theme'}</Text>
                 </View>
-                <Switch value={settings.darkMode} onValueChange={toggleDarkMode} trackColor={{ false: colors.border, true: colors.accentDark }} thumbColor={settings.darkMode ? colors.accent : colors.surface2} />
-              </View>
-              <View style={[s.row, { borderBottomWidth: 0 }]}>
-                <View style={[s.iconBox, { backgroundColor: colors.surface2 }]}><Text>💱</Text></View>
-                <View style={s.rowInfo}>
-                  <Text style={s.rowLabel}>Currency</Text>
-                  <Text style={s.rowHint}>Used across the app</Text>
-                </View>
-                <View style={s.currencyWrap}>
-                  {CURRENCIES.map(c => (
-                    <TouchableOpacity key={c.sym} style={[s.curPill, settings.currency === c.sym && s.curPillActive]} onPress={() => updateSettings({ currency: c.sym })}>
-                      <Text style={[s.curText, settings.currency === c.sym && s.curTextActive]}>{c.sym}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <Switch
+                  value={settings.darkMode}
+                  onValueChange={toggleDarkMode}
+                  trackColor={{ false: colors.border, true: colors.accentDark }}
+                  thumbColor={settings.darkMode ? colors.accent : colors.surface2}
+                />
               </View>
             </View>
 
@@ -313,7 +340,7 @@ export default function SettingsScreen({ navigation }) {
               <View style={s.row}>
                 <View style={[s.iconBox, { backgroundColor: colors.surface2 }]}><Text>📊</Text></View>
                 <View style={s.rowInfo}><Text style={s.rowLabel}>Version</Text></View>
-                <Text style={s.rowMuted}>2.6.0</Text>
+                <Text style={s.rowMuted}>2.7.0</Text>
               </View>
               <TouchableOpacity style={[s.row, { borderBottomWidth: 0 }]} onPress={() => navigation.navigate('AppGuide')} activeOpacity={0.7}>
                 <View style={[s.iconBox, { backgroundColor: colors.surface2 }]}><Text>📖</Text></View>
@@ -358,22 +385,30 @@ const makeStyles = (colors) => StyleSheet.create({
   editIconBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, alignSelf: 'flex-start' },
   editIconLabel: { fontFamily: fonts.regular, fontSize: 12, color: colors.textMuted },
 
-  editModeTitle:          { fontFamily: fonts.heavy, fontSize: 16, color: colors.textPrimary, marginBottom: 18 },
-  editAvatarBtn:          { alignSelf: 'center', position: 'relative', marginBottom: 8 },
-  editAvatarImg:          { width: 80, height: 80, borderRadius: 40 },
-  editAvatarPlaceholder:  { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-  editAvatarInitials:     { fontFamily: fonts.heavy, fontSize: 28, color: colors.activePill },
-  cameraBadge: { position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.surface },
-  editAvatarHint: { fontFamily: fonts.regular, fontSize: 11, color: colors.textMuted, textAlign: 'center', marginBottom: 20 },
-  editLabel:  { fontFamily: fonts.bold, fontSize: 10, color: colors.textMuted, letterSpacing: 1.5, marginBottom: 6 },
-  editInput:  { backgroundColor: colors.surface2, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 11, fontFamily: fonts.bold, fontSize: 14, color: colors.textPrimary, marginBottom: 16 },
-  editActions:    { flexDirection: 'row', gap: 10, marginTop: 4 },
-  cancelBtn:      { flex: 1, paddingVertical: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  cancelBtnText:  { fontFamily: fonts.bold, fontSize: 13, color: colors.textMuted },
-  saveBtn:        { flex: 1, paddingVertical: 12, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center' },
-  saveBtnText:    { fontFamily: fonts.bold, fontSize: 13, color: colors.activePill },
+  editModeTitle:         { fontFamily: fonts.heavy, fontSize: 16, color: colors.textPrimary, marginBottom: 18 },
+  editAvatarBtn:         { alignSelf: 'center', position: 'relative', marginBottom: 8 },
+  editAvatarImg:         { width: 80, height: 80, borderRadius: 40 },
+  editAvatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  editAvatarInitials:    { fontFamily: fonts.heavy, fontSize: 28, color: colors.activePill },
+  cameraBadge:           { position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.surface },
+  editAvatarHint:        { fontFamily: fonts.regular, fontSize: 11, color: colors.textMuted, textAlign: 'center', marginBottom: 20 },
+  editLabel:             { fontFamily: fonts.bold, fontSize: 10, color: colors.textMuted, letterSpacing: 1.5, marginBottom: 6 },
+  editInput:             { backgroundColor: colors.surface2, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 11, fontFamily: fonts.bold, fontSize: 14, color: colors.textPrimary, marginBottom: 16 },
 
-  sectionLabel:  { fontSize: 11, color: colors.textMuted, letterSpacing: 1, paddingBottom: 10, fontFamily: fonts.bold },
+  // Currency chips inside Edit Profile
+  currencyChipsRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+  currencyChip:        { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface2 },
+  currencyChipActive:  { backgroundColor: colors.accent, borderColor: colors.accent },
+  currencyChipText:    { fontFamily: fonts.bold, fontSize: 13, color: colors.accentLight },
+  currencyChipTextActive: { color: colors.activePill },
+
+  editActions:   { flexDirection: 'row', gap: 10, marginTop: 4 },
+  cancelBtn:     { flex: 1, paddingVertical: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  cancelBtnText: { fontFamily: fonts.bold, fontSize: 13, color: colors.textMuted },
+  saveBtn:       { flex: 1, paddingVertical: 12, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center' },
+  saveBtnText:   { fontFamily: fonts.bold, fontSize: 13, color: colors.activePill },
+
+  sectionLabel:  { fontSize: 11, color: 'rgba(255,255,255,0.65)', letterSpacing: 1, paddingBottom: 10, fontFamily: fonts.bold },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, marginTop: spacing.sm },
   chevron:       { fontSize: 10, color: colors.textMuted },
 
@@ -384,12 +419,6 @@ const makeStyles = (colors) => StyleSheet.create({
   rowLabel:{ fontSize: 13, color: colors.textPrimary, fontFamily: fonts.bold },
   rowHint: { fontSize: 11, color: colors.textMuted, marginTop: 2, fontFamily: fonts.regular },
   rowMuted:{ fontSize: 13, color: colors.textMuted, fontFamily: fonts.regular },
-
-  currencyWrap:  { flexDirection: 'row', gap: 6 },
-  curPill:       { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.border },
-  curPillActive: { backgroundColor: colors.accentDark },
-  curText:       { fontSize: 13, color: colors.textMuted, fontFamily: fonts.bold },
-  curTextActive: { color: colors.accent },
 
   logoutBtn:  { marginTop: 4, marginBottom: 16, borderWidth: 0, borderRadius: radius.lg, paddingVertical: 15, alignItems: 'center', backgroundColor: colors.wineRed },
   logoutText: { fontFamily: fonts.bold, fontSize: 15, color: '#FFFFFF', letterSpacing: 0.4 },

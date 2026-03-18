@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, SafeAreaView, Dimensions,
+  StyleSheet, SafeAreaView, Dimensions, Animated,
 } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useApp } from '../context/AppContext';
@@ -11,6 +11,22 @@ import { getCat } from '../data/categories';
 const { width: SCREEN_W } = Dimensions.get('window');
 const FILTERS = ['Week', 'Month', '3 Month', '6 Month', 'Year'];
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ─── Animated pill — spring scale on press ────────────────────────────────────
+function AnimPill({ onPress, isActive, style, activeStyle, textStyle, activeTextStyle, children }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const pressIn  = () => Animated.spring(scale, { toValue: 0.88, useNativeDriver: true, speed: 60, bounciness: 0 }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 30, bounciness: 8 }).start();
+
+  return (
+    <TouchableOpacity onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} activeOpacity={1}>
+      <Animated.View style={[style, isActive && activeStyle, { transform: [{ scale }] }]}>
+        <Text style={[textStyle, isActive && activeTextStyle]}>{children}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
 
 // ── Dual Area / Line Chart ────────────────────────────────────────────────────
 function DualLineChart({ incomePoints, expensePoints, width, height = 200, colors }) {
@@ -34,28 +50,28 @@ function DualLineChart({ incomePoints, expensePoints, width, height = 200, color
   };
 
   const gridLines = [0, 0.25, 0.5, 0.75, 1].map(t => ({
-    y: pad.top + H * (1 - t),
-    label: Math.round(maxV * t) >= 1000 ? `${(Math.round(maxV * t) / 1000).toFixed(1)}k` : `${Math.round(maxV * t)}`,
+    y:     pad.top + H * (1 - t),
+    label: Math.round(maxV * t) >= 1000
+      ? `${(Math.round(maxV * t) / 1000).toFixed(1)}k`
+      : `${Math.round(maxV * t)}`,
   }));
 
   const incPath = buildPath(incomePoints);
   const expPath = buildPath(expensePoints);
   const incArea = buildArea(incomePoints);
   const expArea = buildArea(expensePoints);
-
-  // Only show every Nth label so they don't crowd
   const labelStep = Math.max(1, Math.ceil(n / 10));
 
   return (
     <Svg width={width} height={height}>
       <Defs>
         <LinearGradient id="incGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor={colors.income} stopOpacity="0.4" />
-          <Stop offset="100%" stopColor={colors.income} stopOpacity="0" />
+          <Stop offset="0%"   stopColor={colors.income}  stopOpacity="0.4" />
+          <Stop offset="100%" stopColor={colors.income}  stopOpacity="0"   />
         </LinearGradient>
         <LinearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor={colors.expense} stopOpacity="0.4" />
-          <Stop offset="100%" stopColor={colors.expense} stopOpacity="0" />
+          <Stop offset="0%"   stopColor={colors.expense} stopOpacity="0.4" />
+          <Stop offset="100%" stopColor={colors.expense} stopOpacity="0"   />
         </LinearGradient>
       </Defs>
       {gridLines.map((g, i) => (
@@ -66,15 +82,11 @@ function DualLineChart({ incomePoints, expensePoints, width, height = 200, color
       ))}
       {incArea && <Path d={incArea} fill="url(#incGrad)" />}
       {expArea && <Path d={expArea} fill="url(#expGrad)" />}
-      {incPath && <Path d={incPath} stroke={colors.income} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />}
+      {incPath && <Path d={incPath} stroke={colors.income}  strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />}
       {expPath && <Path d={expPath} stroke={colors.expense} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />}
-      {incomePoints.map((p, i) => i % labelStep === 0 && (
-        <Circle key={`ic${i}`} cx={toX(i)} cy={toY(p.v)} r="3" fill={colors.income} stroke="#111" strokeWidth="1.5" />
-      ))}
-      {expensePoints.map((p, i) => i % labelStep === 0 && (
-        <Circle key={`ec${i}`} cx={toX(i)} cy={toY(p.v)} r="3" fill={colors.expense} stroke="#111" strokeWidth="1.5" />
-      ))}
-      {incomePoints.map((p, i) => i % labelStep === 0 && (
+      {incomePoints.map((p, i)  => i % labelStep === 0 && <Circle key={`ic${i}`} cx={toX(i)} cy={toY(p.v)} r="3" fill={colors.income}  stroke="#111" strokeWidth="1.5" />)}
+      {expensePoints.map((p, i) => i % labelStep === 0 && <Circle key={`ec${i}`} cx={toX(i)} cy={toY(p.v)} r="3" fill={colors.expense} stroke="#111" strokeWidth="1.5" />)}
+      {incomePoints.map((p, i)  => i % labelStep === 0 && (
         <SvgText key={i} x={toX(i)} y={pad.top + H + 22} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.6)" fontFamily={fonts.regular}>{p.label}</SvgText>
       ))}
     </Svg>
@@ -87,50 +99,41 @@ export default function StatsScreen() {
   const colors = settings.darkMode ? darkColors : lightColors;
   const [activeFilter, setActiveFilter] = useState('Month');
   const [viewYear,     setViewYear]     = useState(new Date().getFullYear());
-  const [tooltipId,    setTooltipId]    = useState(null); // for category label on tap
+  const [tooltipId,    setTooltipId]    = useState(null);
   const cur = settings.currency;
   const fmt = n => `${cur}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
   const now = new Date();
   const s   = makeStyles(colors);
 
-  // ── Filter transactions ────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    return transactions.filter(t => {
-      const d = new Date(t.date);
-      switch (activeFilter) {
-        case 'Week':    return (now - d) / 86400000 <= 7;
-        case 'Month':   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        case '3 Month': return (now - d) / 86400000 <= 90;
-        case '6 Month': return (now - d) / 86400000 <= 180;
-        case 'Year':    return d.getFullYear() === viewYear;
-        default:        return true;
-      }
-    });
-  }, [transactions, activeFilter, viewYear]);
+  const filtered = useMemo(() => transactions.filter(t => {
+    const d = new Date(t.date);
+    switch (activeFilter) {
+      case 'Week':    return (now - d) / 86400000 <= 7;
+      case 'Month':   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      case '3 Month': return (now - d) / 86400000 <= 90;
+      case '6 Month': return (now - d) / 86400000 <= 180;
+      case 'Year':    return d.getFullYear() === viewYear;
+      default:        return true;
+    }
+  }), [transactions, activeFilter, viewYear]);
 
   const totalInc = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExp = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const balance  = totalInc - totalExp;
 
-  // Build category map
   const catMap = useMemo(() => {
     const map = {};
     filtered.filter(t => t.type === 'expense').forEach(t => {
       const isCustom = (t.category === 'others' && t.customCategory?.trim());
       const key = isCustom ? 'custom_' + t.customCategory.trim().toLowerCase() : t.category;
-      
       if (!map[key]) {
         const cat = getCat(t.category);
-        let label = cat.label;
-        let color = cat.color;
-        let emoji = cat.emoji;
-
+        let label = cat.label, color = cat.color, emoji = cat.emoji;
         if (isCustom) {
           label = t.customCategory.trim();
           const saved = (customCategories.expense || []).find(c => c.name.toLowerCase() === label.toLowerCase());
           if (saved) color = saved.color;
         }
-
         map[key] = { id: key, label, color, emoji, value: 0 };
       }
       map[key].value += t.amount;
@@ -140,10 +143,7 @@ export default function StatsScreen() {
 
   const barData = Object.values(catMap).sort((a, b) => b.value - a.value);
 
-  // ── Build chart data points ────────────────────────────────────────────────
   const buildPoints = (type) => {
-
-    // WEEK — 7 days, daily
     if (activeFilter === 'Week') {
       return Array.from({ length: 7 }, (_, i) => {
         const d = new Date(now);
@@ -154,8 +154,6 @@ export default function StatsScreen() {
         return { label: ['Su','Mo','Tu','We','Th','Fr','Sa'][d.getDay()], v };
       });
     }
-
-    // MONTH — every day of the current month
     if (activeFilter === 'Month') {
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       return Array.from({ length: daysInMonth }, (_, i) => {
@@ -163,17 +161,12 @@ export default function StatsScreen() {
         const v = transactions
           .filter(t => {
             const d = new Date(t.date);
-            return t.type === type &&
-              d.getFullYear() === now.getFullYear() &&
-              d.getMonth()    === now.getMonth() &&
-              d.getDate()     === day;
+            return t.type === type && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === day;
           })
           .reduce((s, t) => s + t.amount, 0);
         return { label: day % 5 === 1 ? `${day}` : '', v };
       });
     }
-
-    // 3 MONTH — last 3 months by month
     if (activeFilter === '3 Month') {
       return Array.from({ length: 3 }, (_, i) => {
         const mo    = now.getMonth() - (2 - i);
@@ -185,8 +178,6 @@ export default function StatsScreen() {
         return { label: MONTHS[adjMo], v };
       });
     }
-
-    // 6 MONTH — last 6 months by month
     if (activeFilter === '6 Month') {
       return Array.from({ length: 6 }, (_, i) => {
         const mo    = now.getMonth() - (5 - i);
@@ -198,8 +189,6 @@ export default function StatsScreen() {
         return { label: MONTHS[adjMo], v };
       });
     }
-
-    // YEAR — all 12 months of selected year
     return Array.from({ length: 12 }, (_, i) => {
       const v = transactions
         .filter(t => t.type === type && new Date(t.date).getMonth() === i && new Date(t.date).getFullYear() === viewYear)
@@ -216,11 +205,9 @@ export default function StatsScreen() {
     <SafeAreaView style={s.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Accent header */}
         <View style={s.header}>
           <Text style={s.headerTitle}>Statistic</Text>
 
-          {/* Year switcher — only shown when Year filter active */}
           {activeFilter === 'Year' ? (
             <View style={s.yearRow}>
               <TouchableOpacity onPress={() => setViewYear(y => y - 1)} style={s.yearBtn}>
@@ -229,7 +216,8 @@ export default function StatsScreen() {
               <Text style={s.yearLabel}>{viewYear}</Text>
               <TouchableOpacity
                 onPress={() => setViewYear(y => Math.min(y + 1, now.getFullYear()))}
-                style={s.yearBtn}>
+                style={s.yearBtn}
+              >
                 <Text style={s.yearArrow}>›</Text>
               </TouchableOpacity>
             </View>
@@ -237,22 +225,27 @@ export default function StatsScreen() {
             <Text style={s.headerSub}>Updated: {now.toLocaleDateString('en-IN')}</Text>
           )}
 
-          {/* Filter pills */}
+          {/* ── Filter pills — animated ── */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
             {FILTERS.map(f => (
-              <TouchableOpacity key={f}
-                style={[s.pill, activeFilter === f && s.pillActive]}
-                onPress={() => setActiveFilter(f)}>
-                <Text style={[s.pillText, activeFilter === f && s.pillTextActive]}>{f}</Text>
-              </TouchableOpacity>
+              <AnimPill
+                key={f}
+                isActive={activeFilter === f}
+                onPress={() => setActiveFilter(f)}
+                style={s.pill}
+                activeStyle={s.pillActive}
+                textStyle={s.pillText}
+                activeTextStyle={s.pillTextActive}
+              >
+                {f}
+              </AnimPill>
             ))}
           </ScrollView>
 
-          {/* Dual Line Chart */}
           <View style={s.chartCard}>
             <View style={s.chartLegend}>
               <View style={s.chartLegendItem}>
-                <View style={[s.legendLine, { backgroundColor: colors.income }]} />
+                <View style={[s.legendLine, { backgroundColor: colors.income  }]} />
                 <Text style={s.legendLineLabel}>Income</Text>
               </View>
               <View style={s.chartLegendItem}>
@@ -270,13 +263,10 @@ export default function StatsScreen() {
           </View>
         </View>
 
-        {/* Body */}
         <View style={s.body}>
-
-          {/* Summary pills */}
           <View style={s.summaryRow}>
             <View style={s.summaryPill}>
-              <Text style={[s.summaryVal, { color: colors.income }]}>{fmt(totalInc)}</Text>
+              <Text style={[s.summaryVal, { color: colors.income  }]}>{fmt(totalInc)}</Text>
               <Text style={s.summaryLabel}>Income</Text>
             </View>
             <View style={s.summaryPill}>
@@ -289,7 +279,6 @@ export default function StatsScreen() {
             </View>
           </View>
 
-          {/* Category breakdown — tap emoji to see label */}
           <View style={s.card}>
             <Text style={s.cardTitle}>Category Breakdown</Text>
             {barData.length === 0
@@ -300,7 +289,6 @@ export default function StatsScreen() {
                   return (
                     <View key={i}>
                       <View style={s.barRow}>
-                        {/* Tap emoji to toggle label tooltip */}
                         <TouchableOpacity
                           style={s.emojiWrap}
                           onPress={() => setTooltipId(isOpen ? null : b.id)}
@@ -313,7 +301,6 @@ export default function StatsScreen() {
                         </View>
                         <Text style={s.barVal}>{fmt(b.value)}</Text>
                       </View>
-                      {/* Tooltip — shows category name below row */}
                       {isOpen && (
                         <View style={[s.tooltip, { borderLeftColor: b.color }]}>
                           <Text style={[s.tooltipText, { color: b.color }]}>{b.label}</Text>
@@ -326,6 +313,7 @@ export default function StatsScreen() {
             }
           </View>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -343,10 +331,10 @@ const makeStyles = (colors) => StyleSheet.create({
   yearArrow: { fontSize: 22, color: colors.activePill, fontFamily: fonts.bold },
   yearLabel: { fontSize: 18, color: colors.activePill, fontFamily: fonts.heavy },
 
-  pill:          { borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: 'rgba(0,0,0,0.12)', marginRight: 8 },
-  pillActive:    { backgroundColor: colors.activePill },
-  pillText:      { fontSize: 12, color: colors.activePill, fontFamily: fonts.bold },
-  pillTextActive:{ color: colors.accent },
+  pill:           { borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: 'rgba(0,0,0,0.12)', marginRight: 8 },
+  pillActive:     { backgroundColor: colors.activePill },
+  pillText:       { fontSize: 12, color: colors.activePill, fontFamily: fonts.bold },
+  pillTextActive: { color: colors.accent },
 
   chartCard:       { backgroundColor: '#1a1f2e', borderRadius: radius.lg, padding: 15, marginTop: 5 },
   chartLegend:     { flexDirection: 'row', gap: 16, marginBottom: 8, paddingLeft: 70 },
