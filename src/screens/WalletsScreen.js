@@ -134,13 +134,8 @@ export default function WalletsScreen({ navigation }) {
   }, []);
 
   const handleClose = (onDone) => {
-    Animated.spring(slideAnim, {
-      toValue: SCREEN_H, useNativeDriver: true,
-      damping: 24, stiffness: 220, mass: 0.8
-    }).start(() => {
-      if (onDone) onDone();
-      navigation.goBack();
-    });
+    if (onDone) onDone();
+    navigation.goBack();
   };
 
 

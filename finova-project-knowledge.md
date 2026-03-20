@@ -48,9 +48,9 @@
 Track income and expense transactions, view monthly overviews, analyze spending via donut charts, browse activity with calendar heat maps, trend analysis with line charts, custom categories, multiple wallets, app lock, dark/light themes, onboarding, login via JSON backup, logout.
 
 ### Current App Version
-**3.0.1 — Pro System (Free + One-Time Pro Unlock, TEST MODE) + App Lock + Multiple Wallets + Transaction Search + CSV Export + Passcode Export + Deep QA Parity**
+**3.0.2 — Pro System (Free + One-Time Pro Unlock, TEST MODE) + App Lock + Multiple Wallets + Transaction Search + CSV Export + Passcode Export + Deep QA Parity**
 
-### Delivered Files (v3.0.1)
+### Delivered Files (v3.0.2)
 All 10 files are complete drop-in replacements.
 
 | File | Action | Destination in project |
@@ -201,6 +201,9 @@ Profile card view mode shows **👑 PRO badge** if `isPro`. Active wallet name s
 
 **executeClear** preserves: `name`, `age`, `currency`, `darkMode`, `profileImage`, `isPro`, `appLockEnabled`, `appLockPin`, `wallets`, `activeWalletId`, `customCategories`.
 
+**Logout Options:**
+The `LogoutModal` renders 3 explicit paths (Log Out + Download, Log Out without Download). Free users interacting with the Download option are aggressively routed through to the ProPaywall.
+
 ### 10.7 AddTransactionScreen *(v3.0)*
 **File:** `src/screens/AddTransactionScreen.js`
 
@@ -241,29 +244,29 @@ Uses `activeTransactions` throughout — `filtered`, `catMap`, `buildPoints`. Wa
 
 Filters: `['Week','Month','3 Month','6 Month','Year']`
 
-### 10.11 ProPaywallScreen *(v3.0 — rebuilt)*
+### 10.11 ProPaywallScreen *(v3.0.2 — visually redesigned)*
 **File:** `src/screens/ProPaywallScreen.js`
 
-**Background:** `#1A1D1A` (slightly deeper than app bg — own visual identity).
+**Background:** `#090A09` (deep black premium layout).
 
 **Layout:**
 ```
 ✕ close button (top right, rounded ghost button)
-Crown emoji (48px) + "Finova Pro" headline (Heavy 34px)
+Huge 'finova' text logo (Heavy 64px, gold)
 Tagline (Regular 14px)
-Price pill: ₹199 · one-time · no subscription
 
-7 Feature rows:
-  🔒 App Lock
-  👛 Multiple Wallets
-  🔍 Transaction Search
-  📊 CSV Export
-  🔐 Passcode Export
-  🏷️ Unlimited Categories
-  📥 Data Backup
+Vertical column containing Two Stacked Cards:
+[Free Card]
+  ₹0 forever
+  4 Base Features
+  "Current" marker
 
-"Unlock Finova Pro  →" (sage fill, primary CTA)
-"Restore Purchase" (ghost)
+[Pro Card] (Gold accented)
+  ₹49 one-time limited offer (₹199 crossed out) + "LIMITED TIME" badge
+  5 Pro Features
+  "Unlock Pro" CTA
+
+"Restore Purchase" (Link)
 Legal footer
 ```
 
@@ -578,6 +581,14 @@ function decryptJson(encStr, password) {
 | 174 | Fixed CameraIcon SVG path crashing the app | SettingsScreen.js |
 | 175 | **Deep QA Audit Completed** — 7 vulnerabilities identified | Walkthrough.md |
 | 176 | **v3.0.1 Patch Cycle Delivered** — All 7 QA Vulnerabilities decisively patched | Multiple files |
+| 177 | App Lock bug — explicitly mapped `RESET_APP` in context to wipe lock on logout | AppContext.js, SettingsScreen.js |
+| 178 | AppGuide redesign — distinctly separated Free Features and Pro Features arrays | AppGuideScreen.js |
+| 179 | Settings Download Restrict — Free users only see "Log Out" destructive option | SettingsScreen.js |
+| 180 | ProPaywall stacked layout redesign + huge "finova" top logo + premium styling | ProPaywallScreen.js |
+| 181 | Instant close transitions removed `Animated.spring` on exit for Wallets, AppGuide, ProPaywall | Multiple files |
+| 182 | DataInfoScreen onboarding features updated to include new Encrypt & Privacy emphasis | DataInfoScreen.js |
+| 183 | LogoutModal explicitly shows 3 distinct options, routing Free users to Paywall on 'Download' | SettingsScreen.js |
+| 184 | ProPaywall pricing updated to visually reflect ₹49 Limited Time Offer (₹199 strikethrough) | ProPaywallScreen.js |
 
 ---
 
@@ -770,5 +781,5 @@ PIN stored as plaintext in AsyncStorage (inside `@flo_data`). Not in secure stor
 
 *Last updated: March 20, 2026*
 *Project: Finova Personal Finance App*
-*Version: 3.0.1 — Pro System + App Lock + Multiple Wallets + Transaction Search + CSV Export + Passcode Export + Deep QA Parity*
+*Version: 3.0.2 — Pro System + App Lock + Multiple Wallets + Transaction Search + CSV Export + Passcode Export + Deep QA Parity + Architecture Transitions Fixes*
 *Developer: Abhiram Kasturi*

@@ -248,7 +248,7 @@ function DecryptImportModal({ visible, onCancel, onDecrypt }) {
 }
 
 // ─── Log Out Modal ────────────────────────────────────────────────────────────
-function LogoutModal({ visible, onCancel, onLogoutOnly, onDownloadLogout }) {
+function LogoutModal({ visible, onCancel, onLogoutOnly, onDownloadLogout, isPro, onUpgrade }) {
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onCancel}>
       <View style={cm.backdrop}>
@@ -256,10 +256,33 @@ function LogoutModal({ visible, onCancel, onLogoutOnly, onDownloadLogout }) {
           <View style={cm.handle} />
           <View style={cm.iconRing}><Text style={cm.iconEmoji}>🚪</Text></View>
           <Text style={cm.title}>Log Out</Text>
-          <Text style={cm.body}>Your data is only stored locally. Download a backup before logging out to keep your data safe.</Text>
-          <TouchableOpacity style={cm.primaryBtn} onPress={onDownloadLogout}><Text style={cm.primaryBtnText}>📥 Download & Log Out</Text></TouchableOpacity>
-          <TouchableOpacity style={cm.destructiveBtn} onPress={onLogoutOnly}><Text style={cm.destructiveBtnText}>Log Out Anyway</Text></TouchableOpacity>
-          <TouchableOpacity style={cm.ghostBtn} onPress={onCancel}><Text style={cm.ghostBtnText}>Cancel</Text></TouchableOpacity>
+          <Text style={{ fontFamily: 'Fungis-Regular', fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: 24, paddingHorizontal: 12 }}>
+            Your data is only stored locally. How would you like to proceed?
+          </Text>
+          
+          <TouchableOpacity 
+            style={[cm.primaryBtn, { flexDirection: 'column', alignItems: 'center', marginBottom: 12, paddingVertical: 14 }]} 
+            onPress={() => isPro ? onDownloadLogout() : onUpgrade()}
+          >
+            <Text style={cm.primaryBtnText}>📥 Log Out with Download {!isPro && '👑'}</Text>
+            <Text style={{ fontFamily: 'Fungis-Regular', fontSize: 11, color: 'rgba(34,38,41,0.65)', marginTop: 2 }}>
+              Saves a backup JSON file before logging out.
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[cm.destructiveBtn, { flexDirection: 'column', alignItems: 'center', marginBottom: 16, paddingVertical: 14 }]} 
+            onPress={onLogoutOnly}
+          >
+            <Text style={cm.destructiveBtnText}>Log Out without Download</Text>
+            <Text style={{ fontFamily: 'Fungis-Regular', fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+              Returns you to the welcome screen instantly.
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={cm.ghostBtn} onPress={onCancel}>
+            <Text style={cm.ghostBtnText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -430,15 +453,7 @@ export default function SettingsScreen({ navigation }) {
   const performLogout = async () => {
     setLogoutModalOpen(false);
     await AsyncStorage.clear();
-    dispatch({
-      type: 'LOAD_DATA', payload: {
-        transactions: [],
-        settings: { name: '', age: '', currency: '₹', darkMode: false, profileImage: '', isPro: false, appLockEnabled: false, appLockPin: '' },
-        customCategories: { expense: [], income: [] },
-        wallets: [{ id: 'default', name: 'Personal', icon: '💳', archived: false }],
-        activeWalletId: 'default',
-      }
-    });
+    dispatch({ type: 'RESET_APP' });
     navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
   };
 
@@ -581,7 +596,17 @@ export default function SettingsScreen({ navigation }) {
         </SafeAreaView>
       </ImageBackground>
 
-      <LogoutModal visible={logoutModalOpen} onCancel={() => setLogoutModalOpen(false)} onLogoutOnly={performLogout} onDownloadLogout={handleDownloadThenLogout} />
+      <LogoutModal 
+        visible={logoutModalOpen} 
+        onCancel={() => setLogoutModalOpen(false)} 
+        onLogoutOnly={performLogout} 
+        onDownloadLogout={handleDownloadThenLogout} 
+        isPro={isPro} 
+        onUpgrade={() => {
+          setLogoutModalOpen(false);
+          navigation.navigate('ProPaywall');
+        }}
+      />
       <ClearDataModal visible={clearModalOpen} onCancel={() => setClearModalOpen(false)} onConfirm={executeClear} />
       <PinSetupModal visible={pinSetupOpen} onCancel={() => setPinSetupOpen(false)} onSave={p => { updateSettings({ appLockEnabled: true, appLockPin: p }); setPinSetupOpen(false); }} />
       <PasscodeExportModal visible={passExportOpen} onCancel={() => setPassExportOpen(false)} onExport={handlePasscodeExport} />

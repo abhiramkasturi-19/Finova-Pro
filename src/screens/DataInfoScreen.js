@@ -13,19 +13,24 @@ const { width, height } = Dimensions.get('window');
 
 const DATA_FEATURES = [
   {
+    icon: '🔒',
+    title: 'Privacy First',
+    desc: 'All your financial data is stored locally. We never see it, track it, or sell it.',
+  },
+  {
     icon: '📤',
-    title: 'Export Data',
-    desc: 'Download all your transactions and settings as a backup file, saved directly to your device.',
+    title: 'Export & Encrypt',
+    desc: 'Download regular backups or securely encrypt (.enc) your records with a passcode.',
   },
   {
     icon: '📥',
-    title: 'Import Data',
-    desc: 'Restore a previous backup — all your transactions and preferences come back instantly.',
+    title: 'Restore Data',
+    desc: 'Easily recover your accounts by uploading a previous backup file when logging in.',
   },
   {
     icon: '🗑️',
-    title: 'Delete Data',
-    desc: 'Permanently wipe everything from the app. A clean slate, no traces left behind.',
+    title: 'Clear Slate',
+    desc: 'Permanently wipe everything from the app whenever you need a fresh start.',
   },
 ];
 
@@ -96,15 +101,15 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 28, paddingTop: 56, paddingBottom: 20 },
   backBtn: { marginBottom: 28 },
   backText: { fontFamily: 'Fungis-Regular', fontSize: 15, color: 'rgba(255,255,255,0.55)' },
-  title: { fontFamily: 'Fungis-Heavy', fontSize: 40, color: '#FFFFFF', lineHeight: 50, marginBottom: 14 },
-  titleAccent: { width: 44, height: 3, backgroundColor: '#AEB784', borderRadius: 2, marginBottom: 24 },
-  intro: { fontFamily: 'Fungis-Regular', fontSize: 15, color: 'rgba(255,255,255,0.62)', lineHeight: 25, marginBottom: 28 },
+  title: { fontFamily: 'Fungis-Heavy', fontSize: 36, color: '#FFFFFF', lineHeight: 46, marginBottom: 12 },
+  titleAccent: { width: 44, height: 3, backgroundColor: '#AEB784', borderRadius: 2, marginBottom: 20 },
+  intro: { fontFamily: 'Fungis-Regular', fontSize: 14, color: 'rgba(255,255,255,0.62)', lineHeight: 22, marginBottom: 24 },
   highlight: { fontFamily: 'Fungis-Bold', color: '#AEB784' },
   card: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 16,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1, borderColor: 'rgba(174,183,132,0.14)',
-    borderRadius: 14, padding: 16, marginBottom: 12,
+    borderRadius: 14, padding: 14, marginBottom: 10,
   },
   cardIcon: { fontSize: 24, marginTop: 1 },
   cardBody: { flex: 1 },

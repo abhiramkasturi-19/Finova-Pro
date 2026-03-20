@@ -10,7 +10,7 @@ import {
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const GUIDE_SECTIONS = [
+const FREE_FEATURES = [
   {
     title: 'Home',
     desc: "Your monthly balance, income, and expenses at a glance. Tap + to add a transaction.",
@@ -21,35 +21,46 @@ const GUIDE_SECTIONS = [
   },
   {
     title: 'Activity',
-    desc: 'Calendar heat map of your spending — darker days mean more activity. Tap a day to see its transactions. Use the search icon (Pro) to find specific entries by note or amount.',
+    desc: 'Calendar heat map of your spending — darker days mean more activity. Tap a day to see its transactions.',
   },
   {
     title: 'Stats',
     desc: 'Dual line charts showing income vs expenses over time. Switch between weekly, monthly, and yearly views using the period selector.',
   },
   {
-    title: 'Wallets (Pro)',
-    desc: 'Manage multiple spending contexts (e.g., Personal, Business). Transactions are tagged to the active wallet. Switch wallets via the avatar or wallet pill on the home screen.',
-  },
-  {
     title: 'Categories',
     desc: 'Built-in categories cover common expenses. Add custom ones in the transaction form — each gets a unique color. Free users can add up to 3 custom categories.',
   },
   {
-    title: 'App Lock (Pro)',
-    desc: 'Secure your financial data with a 4-digit PIN. Enable this in Settings → Preferences. The lock triggers whenever you return to the app.',
-  },
-  {
-    title: 'Backing Up & Exporting',
-    desc: 'Download a JSON backup of everything. Pro users can also export transactions to CSV for Excel, or use Passcode Export to password-protect their backup files.',
-  },
-  {
-    title: 'Restoring an Account',
-    desc: 'On the Welcome screen tap Log In, then upload your backup JSON, encrypted (.enc), or CSV file. Everything will be fully restored.',
+    title: 'Backing Up & Restoring',
+    desc: 'Download a JSON backup of everything. On the Welcome screen tap Log In, then upload your backup JSON to fully restore your account.',
   },
   {
     title: 'Privacy',
     desc: 'All data stays on your device. Nothing is sent to any server. Your transactions and backup files never leave your phone unless you choose to share them.',
+  },
+];
+
+const PRO_FEATURES = [
+  {
+    title: 'Wallets',
+    desc: 'Manage multiple spending contexts (e.g., Personal, Business). Transactions are tagged to the active wallet. Switch wallets via the avatar or wallet pill on the home screen.',
+  },
+  {
+    title: 'App Lock',
+    desc: 'Secure your financial data with a 4-digit PIN. Enable this in Settings → Preferences. The lock triggers whenever you return to the app.',
+  },
+  {
+    title: 'Export & Encrypt',
+    desc: 'Export transactions to CSV for Excel, or use Passcode Export to password-protect your backup files (creates an encrypted .enc file).',
+  },
+  {
+    title: 'Activity Search',
+    desc: 'Use the search icon in the Activity screen to find specific entries by note or amount.',
+  },
+  {
+    title: 'Unlimited Categories',
+    desc: 'Add as many custom categories as you need for both income and expenses.',
   },
 ];
 
@@ -68,10 +79,7 @@ export default function AppGuideScreen({ navigation }) {
 
   // Graceful slide-down exit
   const handleClose = () => {
-    Animated.spring(slideAnim, {
-      toValue: SCREEN_HEIGHT, useNativeDriver: true,
-      damping: 26, stiffness: 240, mass: 0.9
-    }).start(() => navigation.goBack());
+    navigation.goBack();
   };
 
   useEffect(() => {
@@ -105,11 +113,25 @@ export default function AppGuideScreen({ navigation }) {
             A complete reference for Finova Free and Pro features.
           </Text>
 
-          {GUIDE_SECTIONS.map((section, i) => (
-            <View key={i} style={styles.card}>
+          <Text style={styles.sectionHeading}>Free Features</Text>
+          {FREE_FEATURES.map((section, i) => (
+            <View key={`free-${i}`} style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.indexPill}>
                   <Text style={styles.indexText}>{String(i + 1).padStart(2, '0')}</Text>
+                </View>
+                <Text style={styles.cardTitle}>{section.title}</Text>
+              </View>
+              <Text style={styles.cardDesc}>{section.desc}</Text>
+            </View>
+          ))}
+
+          <Text style={[styles.sectionHeading, { marginTop: 24, color: '#AEB784' }]}>Pro Features</Text>
+          {PRO_FEATURES.map((section, i) => (
+            <View key={`pro-${i}`} style={[styles.card, { borderColor: 'rgba(174,183,132,0.3)' }]}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.indexPill, { backgroundColor: '#AEB784', borderColor: '#AEB784' }]}>
+                  <Text style={[styles.indexText, { color: '#2C3020' }]}>{String(i + 1).padStart(2, '0')}</Text>
                 </View>
                 <Text style={styles.cardTitle}>{section.title}</Text>
               </View>
@@ -140,7 +162,12 @@ const styles = StyleSheet.create({
 
   intro: {
     fontFamily: 'Fungis-Regular',
-    fontSize: 15, color: 'rgba(255,255,255,0.55)', lineHeight: 24, marginBottom: 28,
+    fontSize: 15, color: 'rgba(255,255,255,0.55)', lineHeight: 24, marginBottom: 20,
+  },
+
+  sectionHeading: {
+    fontFamily: 'Fungis-Heavy', fontSize: 22, color: '#FFFFFF',
+    marginBottom: 16, marginTop: 12,
   },
 
   card: {

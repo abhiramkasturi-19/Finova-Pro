@@ -44,6 +44,9 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
 
+    case 'RESET_APP':
+      return initialState;
+
     case 'LOAD_DATA': {
       const loaded   = action.payload.customCategories || { expense: [], income: [] };
       const migrate  = (list) => {
