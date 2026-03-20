@@ -61,6 +61,9 @@ function reducer(state, action) {
           ...initialState.settings,
           ...state.settings,
           ...(action.payload.settings || {}),
+          isPro: state.settings.isPro,
+          appLockEnabled: state.settings.appLockEnabled,
+          appLockPin: state.settings.appLockPin,
         },
         customCategories: {
           expense: migrate(loaded.expense),

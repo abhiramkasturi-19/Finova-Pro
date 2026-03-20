@@ -2,7 +2,7 @@
 // Added: ProPaywallScreen · WalletsScreen · AppLock PIN overlay
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   TouchableOpacity, View, StyleSheet, Text, Modal,
@@ -31,6 +31,14 @@ import Icon from './src/components/Icon';
 
 SplashScreen.preventAutoHideAsync();
 
+const FinovaTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#000000',
+  },
+};
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const Stack = createNativeStackNavigator();
 
@@ -53,6 +61,10 @@ function AppLockOverlay({ children }) {
   const appStateRef         = useRef(AppState.currentState);
 
   useEffect(() => {
+    if (settings.appLockEnabled && settings.appLockPin) {
+      setLocked(true);
+      setPin('');
+    }
     const sub = AppState.addEventListener('change', (next) => {
       const prev = appStateRef.current;
       appStateRef.current = next;
@@ -337,7 +349,7 @@ export default function App() {
       <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={panDownManual} />
       <Stack.Screen name="AppGuide"       component={AppGuideScreen}       options={panDownManual} />
       <Stack.Screen name="ProPaywall"     component={ProPaywallScreen}     options={panDownManual} />
-      <Stack.Screen name="Wallets"        component={WalletsScreen}        options={slideRight}    />
+      <Stack.Screen name="Wallets"        component={WalletsScreen}        options={panDownManual} />
     </>
   );
 
@@ -345,7 +357,7 @@ export default function App() {
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <AppProvider>
         <AppLockOverlay>
-          <NavigationContainer>
+          <NavigationContainer theme={FinovaTheme}>
             <Stack.Navigator screenOptions={{ headerShown: false, ...slideRight }}>
               {isOnboarded ? (
                 <>

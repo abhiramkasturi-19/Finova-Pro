@@ -132,8 +132,13 @@ export default function AddTransactionScreen({ navigation, route }) {
   }, []);
 
   const handleClose = (onDone) => {
-    if (onDone) onDone();
-    navigation.goBack();
+    Animated.spring(slideAnim, {
+      toValue: SCREEN_H, useNativeDriver: true,
+      damping: 24, stiffness: 220, mass: 0.8
+    }).start(() => {
+      if (onDone) onDone();
+      navigation.goBack();
+    });
   };
 
   useEffect(() => {

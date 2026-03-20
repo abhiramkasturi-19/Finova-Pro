@@ -115,6 +115,34 @@ export default function WalletsScreen({ navigation }) {
   const [newModalOpen,    setNewModalOpen   ] = useState(false);
   const [renameTarget,    setRenameTarget   ] = useState(null);
   const [showArchived,    setShowArchived   ] = useState(false);
+  const slideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      damping: 26,
+      stiffness: 240,
+      mass: 0.9,
+    }).start();
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
+
+  const handleClose = (onDone) => {
+    Animated.spring(slideAnim, {
+      toValue: SCREEN_H, useNativeDriver: true,
+      damping: 24, stiffness: 220, mass: 0.8
+    }).start(() => {
+      if (onDone) onDone();
+      navigation.goBack();
+    });
+  };
+
 
   const active   = (wallets || []).filter(w => !w.archived);
   const archived = (wallets || []).filter(w =>  w.archived);
@@ -124,7 +152,7 @@ export default function WalletsScreen({ navigation }) {
 
   const handleSwitch = (id) => {
     switchWallet(id);
-    navigation.goBack();
+    handleClose();
   };
 
   const handleCreate = (name, icon) => {
@@ -163,138 +191,142 @@ export default function WalletsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <Animated.View style={{flex: 1, transform: [{ translateY: slideAnim }]}}>
+        <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={s.backBtn}>
-            <Text style={s.backText}>←</Text>
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={s.title}>Wallets</Text>
-            <Text style={s.subtitle}>Switch context · Your data follows.</Text>
-          </View>
-        </View>
-
-        {/* Active wallet context hint */}
-        {activeWalletId !== 'default' && (
-          <View style={s.activeBanner}>
-            <Text style={s.activeBannerText}>
-              📊  All screens are showing{' '}
-              <Text style={s.activeBannerName}>
-                {wallets?.find(w => w.id === activeWalletId)?.name || 'this wallet'}
-              </Text>
-              {' '}data
-            </Text>
-            <TouchableOpacity onPress={() => handleSwitch('default')}>
-              <Text style={s.activeBannerBack}>Back to Personal</Text>
+          {/* Header */}
+          <View style={s.header}>
+            <TouchableOpacity onPress={() => handleClose()} activeOpacity={0.7} style={s.backBtn}>
+              <Text style={s.backText}>←</Text>
             </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={s.title}>Wallets</Text>
+              <Text style={s.subtitle}>Switch context · Your data follows.</Text>
+            </View>
           </View>
-        )}
 
-        {/* Wallet list */}
-        <Text style={s.sectionLabel}>YOUR WALLETS</Text>
-        <View style={s.card}>
-          {active.map((wallet, i) => {
-            const isActive = wallet.id === activeWalletId;
-            const count    = txnCount(wallet.id);
-            const isLast   = i === active.length - 1;
-            return (
-              <TouchableOpacity
-                key={wallet.id}
-                style={[s.walletRow, isActive && s.walletRowActive, isLast && { borderBottomWidth: 0 }]}
-                onPress={() => handleSwitch(wallet.id)}
-                activeOpacity={0.78}
-              >
-                <View style={[s.walletIconBox, isActive && s.walletIconBoxActive]}>
-                  <Text style={s.walletIcon}>{wallet.icon}</Text>
-                </View>
-                <View style={s.walletInfo}>
-                  <Text style={[s.walletName, isActive && s.walletNameActive]}>{wallet.name}</Text>
-                  <Text style={s.walletCount}>{count} transaction{count !== 1 ? 's' : ''}</Text>
-                </View>
-                {isActive
-                  ? <View style={s.activePill}><Text style={s.activePillText}>Active</Text></View>
-                  : (
-                    <View style={s.walletActions}>
-                      {wallet.id !== 'default' && (
-                        <>
-                          <TouchableOpacity style={s.actionBtn} onPress={() => setRenameTarget(wallet)} activeOpacity={0.6}>
-                            <Text style={s.actionBtnText}>✏️</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={s.actionBtn} onPress={() => handleArchive(wallet)} activeOpacity={0.6}>
-                            <Text style={s.actionBtnText}>📦</Text>
+          {/* Active wallet context hint */}
+          {activeWalletId !== 'default' && (
+            <View style={s.activeBanner}>
+              <Text style={s.activeBannerText}>
+                📊  All screens are showing{' '}
+                <Text style={s.activeBannerName}>
+                  {wallets?.find(w => w.id === activeWalletId)?.name || 'this wallet'}
+                </Text>
+                {' '}data
+              </Text>
+              <TouchableOpacity onPress={() => handleSwitch('default')}>
+                <Text style={s.activeBannerBack}>Back to Personal</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Wallet list */}
+          <Text style={s.sectionLabel}>YOUR WALLETS</Text>
+          <View style={s.card}>
+            {active.map((wallet, i) => {
+              const isActive = wallet.id === activeWalletId;
+              const count    = txnCount(wallet.id);
+              const isLast   = i === active.length - 1;
+              return (
+                <TouchableOpacity
+                  key={wallet.id}
+                  style={[s.walletRow, isActive && s.walletRowActive, isLast && { borderBottomWidth: 0 }]}
+                  onPress={() => handleSwitch(wallet.id)}
+                  activeOpacity={0.78}
+                >
+                  <View style={[s.walletIconBox, isActive && s.walletIconBoxActive]}>
+                    <Text style={s.walletIcon}>{wallet.icon}</Text>
+                  </View>
+                  <View style={s.walletInfo}>
+                    <Text style={[s.walletName, isActive && s.walletNameActive]}>{wallet.name}</Text>
+                    <Text style={s.walletCount}>{count} transaction{count !== 1 ? 's' : ''}</Text>
+                  </View>
+                  {isActive
+                    ? <View style={s.activePill}><Text style={s.activePillText}>Active</Text></View>
+                    : (
+                      <View style={s.walletActions}>
+                        {wallet.id !== 'default' && (
+                          <>
+                            <TouchableOpacity style={s.actionBtn} onPress={() => setRenameTarget(wallet)} activeOpacity={0.6}>
+                              <Text style={s.actionBtnText}>✏️</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={s.actionBtn} onPress={() => handleArchive(wallet)} activeOpacity={0.6}>
+                              <Text style={s.actionBtnText}>📦</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={s.actionBtn} onPress={() => handleDelete(wallet)} activeOpacity={0.6}>
+                              <Text style={[s.actionBtnText, { color: colors.expense }]}>🗑️</Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
+                        <Text style={s.rowChevron}>›</Text>
+                      </View>
+                    )
+                  }
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* New wallet button */}
+          <TouchableOpacity
+            style={s.newBtn}
+            onPress={() => isPro ? setNewModalOpen(true) : navigation.navigate('ProPaywall')}
+            activeOpacity={0.82}
+          >
+            <Text style={s.newBtnIcon}>＋</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.newBtnText}>New Wallet</Text>
+              {!isPro && <Text style={s.newBtnHint}>🔒 Pro feature</Text>}
+            </View>
+          </TouchableOpacity>
+
+          {/* Archived wallets */}
+          {archived.length > 0 && (
+            <>
+              <TouchableOpacity style={s.archivedHeader} onPress={() => setShowArchived(v => !v)} activeOpacity={0.7}>
+                <Text style={s.sectionLabel}>ARCHIVED  ({archived.length})</Text>
+                <Text style={s.chevron}>{showArchived ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+              {showArchived && (
+                <View style={s.card}>
+                  {archived.map((wallet, i) => {
+                    const count  = txnCount(wallet.id);
+                    const isLast = i === archived.length - 1;
+                    return (
+                      <View key={wallet.id} style={[s.walletRow, isLast && { borderBottomWidth: 0 }]}>
+                        <View style={s.walletIconBox}>
+                          <Text style={[s.walletIcon, { opacity: 0.45 }]}>{wallet.icon}</Text>
+                        </View>
+                        <View style={s.walletInfo}>
+                          <Text style={[s.walletName, { color: colors.textMuted }]}>{wallet.name}</Text>
+                          <Text style={s.walletCount}>{count} transaction{count !== 1 ? 's' : ''} · Archived</Text>
+                        </View>
+                        <View style={s.walletActions}>
+                          <TouchableOpacity style={s.actionBtn} onPress={() => unarchiveWallet(wallet.id)} activeOpacity={0.6}>
+                            <Text style={s.actionBtnText}>♻️</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={s.actionBtn} onPress={() => handleDelete(wallet)} activeOpacity={0.6}>
                             <Text style={[s.actionBtnText, { color: colors.expense }]}>🗑️</Text>
                           </TouchableOpacity>
-                        </>
-                      )}
-                      <Text style={s.rowChevron}>›</Text>
-                    </View>
-                  )
-                }
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* New wallet button */}
-        <TouchableOpacity
-          style={s.newBtn}
-          onPress={() => isPro ? setNewModalOpen(true) : navigation.navigate('ProPaywall')}
-          activeOpacity={0.82}
-        >
-          <Text style={s.newBtnIcon}>＋</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={s.newBtnText}>New Wallet</Text>
-            {!isPro && <Text style={s.newBtnHint}>🔒 Pro feature</Text>}
-          </View>
-        </TouchableOpacity>
-
-        {/* Archived wallets */}
-        {archived.length > 0 && (
-          <>
-            <TouchableOpacity style={s.archivedHeader} onPress={() => setShowArchived(v => !v)} activeOpacity={0.7}>
-              <Text style={s.sectionLabel}>ARCHIVED  ({archived.length})</Text>
-              <Text style={s.chevron}>{showArchived ? '▲' : '▼'}</Text>
-            </TouchableOpacity>
-            {showArchived && (
-              <View style={s.card}>
-                {archived.map((wallet, i) => {
-                  const count  = txnCount(wallet.id);
-                  const isLast = i === archived.length - 1;
-                  return (
-                    <View key={wallet.id} style={[s.walletRow, isLast && { borderBottomWidth: 0 }]}>
-                      <View style={s.walletIconBox}>
-                        <Text style={[s.walletIcon, { opacity: 0.45 }]}>{wallet.icon}</Text>
+                        </View>
                       </View>
-                      <View style={s.walletInfo}>
-                        <Text style={[s.walletName, { color: colors.textMuted }]}>{wallet.name}</Text>
-                        <Text style={s.walletCount}>{count} transaction{count !== 1 ? 's' : ''} · Archived</Text>
-                      </View>
-                      <View style={s.walletActions}>
-                        <TouchableOpacity style={s.actionBtn} onPress={() => unarchiveWallet(wallet.id)} activeOpacity={0.6}>
-                          <Text style={s.actionBtnText}>♻️</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={s.actionBtn} onPress={() => handleDelete(wallet)} activeOpacity={0.6}>
-                          <Text style={[s.actionBtnText, { color: colors.expense }]}>🗑️</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </>
-        )}
+                    );
+                  })}
+                </View>
+              )}
+            </>
+          )}
 
-        <Text style={s.footnote}>
-          Long-press any wallet row to rename it.{'\n'}
-          Archived wallets keep their transactions but are hidden from the active view.
-        </Text>
+<Text style={s.footnote}>
+  Long-press any wallet row to rename it.
+</Text>
+<Text style={s.footnote}>
+  Archived wallets keep their transactions but are hidden from the active view.
+</Text>
 
-      </ScrollView>
+        </ScrollView>
+      </Animated.View>
 
       <NewWalletModal
         visible={newModalOpen}

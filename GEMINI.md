@@ -33,8 +33,8 @@
 - **Directional Slide:** Tab transitions use directional logic (right-of-current slides from right, etc.) with spring physics.
 - **Android Tab Fix:** The tab bar wrapper must have both `zIndex: 100` AND `elevation: 100` to prevent screen content from overlapping it.
 - **Inactive Screens:** Use `display: 'none'` (not `pointerEvents: 'none'`) to fully remove inactive tab screens from the render tree.
-- **White Flash Fix:** All stack screen options must include `contentStyle: { backgroundColor: '#111' }`.
-- **Modals:** `AddTransaction` and `AppGuide` use `presentation: 'modal'` + `slide_from_bottom`. **Strict Rule:** This is required for animations to work correctly on Android native stack.
+- **White Flash Fix:** The `NavigationContainer` now uses a custom dark theme to prevent white flashes. All stack screen options include `contentStyle: { backgroundColor: '#111' }`.
+- **Modals:** `AddTransaction`, `AppGuide`, and `WalletsScreen` now use `presentation: 'transparentModal'` + a manual slide-up animation from the bottom.
 
 ### 3. Theming Rules (CRITICAL)
 - **Strict Rule:** NEVER `import { colors }` from the theme file into a component for static `StyleSheet.create` calls.
@@ -57,10 +57,10 @@
 - **Home Screen:** Wallet date format is "FullMonth-Year : Present Month" (e.g., "March-26 : Present Month").
 
 ### 6. Backup & Restore
-- Implemented in `SettingsScreen.js` under a collapsible **Data Management** section.
+- Implemented in `SettingsScreen.js` and `LoginScreen.js`.
+- **Export:** Supports full backup to `.json`, Pro users can export to `.csv` or a password-protected `.enc` file.
+- **Import:** Both screens now support restoring from `.json`, `.csv`, and `.enc` files, with a passcode prompt for encrypted backups.
 - Uses `expo-file-system/legacy` to avoid modern API deprecation errors in SDK 55.
-- Exports state (transactions, settings, custom categories) to `finova_backup.json`.
-- Restores data by parsing the JSON and dispatching `LOAD_DATA`.
 
 ---
 

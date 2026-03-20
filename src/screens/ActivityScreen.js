@@ -278,14 +278,18 @@ export default function ActivityScreen({ navigation }) {
   const now = new Date();
 
   // Use activeTransactions (wallet-filtered) for all display + stats
-  const filtered = useMemo(() => activeTransactions.filter(t => {
-    const d = new Date(t.date);
-    if (activeFilter === 'Week')    return (now - d) / 86400000 <= 7;
-    if (activeFilter === 'Month')   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    if (activeFilter === 'Quarter') return (now - d) / 86400000 <= 90;
-    if (activeFilter === 'Annual')  return d.getFullYear() === now.getFullYear();
-    return true;
-  }), [activeTransactions, activeFilter]);
+  const filtered = useMemo(() => {
+    const today = new Date();
+    return activeTransactions.filter(t => {
+      const d = new Date(t.date);
+      const diff = (today - d) / 86400000;
+      if (activeFilter === 'Week')    return diff >= 0 && diff <= 7;
+      if (activeFilter === 'Month')   return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+      if (activeFilter === 'Quarter') return diff >= 0 && diff <= 90;
+      if (activeFilter === 'Annual')  return d.getFullYear() === today.getFullYear();
+      return true;
+    });
+  }, [activeTransactions, activeFilter]);
 
   const expenses = filtered.filter(t => t.type === 'expense');
   const totalExp = expenses.reduce((s, t) => s + t.amount, 0);
@@ -452,7 +456,7 @@ export default function ActivityScreen({ navigation }) {
         {/* Transaction list */}
         {displayTxns.length === 0
           ? <Text style={s.empty}>{searchQuery ? 'No results found.' : 'No records found.'}</Text>
-          : displayTxns.map(t => {
+          : displayTxns.slice(0, 100).map(t => {
               const cat = getCat(t.category);
               let color = cat.color, label = cat.label;
               if (t.category === 'others' && t.customCategory?.trim()) {

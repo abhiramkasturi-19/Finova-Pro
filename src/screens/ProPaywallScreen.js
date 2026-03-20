@@ -35,10 +35,20 @@ export default function ProPaywallScreen({ navigation }) {
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      navigation.goBack(); return true;
+      handleClose(); return true;
     });
     return () => sub.remove();
   }, []);
+
+  const handleClose = (onDone) => {
+    Animated.spring(slideAnim, {
+      toValue: SCREEN_H, useNativeDriver: true,
+      damping: 26, stiffness: 240, mass: 0.9
+    }).start(() => {
+      if (onDone) onDone();
+      navigation.goBack();
+    });
+  };
 
   const handlePurchase = () => {
     setLoading(true);
@@ -51,7 +61,7 @@ export default function ProPaywallScreen({ navigation }) {
     setTimeout(() => {
       updatePro(true);
       setLoading(false);
-      navigation.goBack();
+      handleClose();
     }, 900);
   };
 
@@ -59,7 +69,7 @@ export default function ProPaywallScreen({ navigation }) {
     // ── TEST MODE — replace with RevenueCat in production ──────────────────
     // const customerInfo = await Purchases.restorePurchases();
     // if (customerInfo.entitlements.active['pro']) { updatePro(true); ... }
-    navigation.goBack();
+    handleClose();
   };
 
   return (
@@ -68,7 +78,7 @@ export default function ProPaywallScreen({ navigation }) {
         <ScrollView contentContainerStyle={pw.scroll} showsVerticalScrollIndicator={false}>
 
           {/* Close */}
-          <TouchableOpacity style={pw.closeBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <TouchableOpacity style={pw.closeBtn} onPress={() => handleClose()} activeOpacity={0.7}>
             <Text style={pw.closeText}>✕</Text>
           </TouchableOpacity>
 

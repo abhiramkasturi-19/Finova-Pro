@@ -21,31 +21,31 @@ const GUIDE_SECTIONS = [
   },
   {
     title: 'Activity',
-    desc: 'Calendar heat map of your spending — darker days mean more activity. Tap a day to see its transactions. The donut chart below breaks down categories for the month.',
+    desc: 'Calendar heat map of your spending — darker days mean more activity. Tap a day to see its transactions. Use the search icon (Pro) to find specific entries by note or amount.',
   },
   {
     title: 'Stats',
     desc: 'Dual line charts showing income vs expenses over time. Switch between weekly, monthly, and yearly views using the period selector.',
   },
   {
+    title: 'Wallets (Pro)',
+    desc: 'Manage multiple spending contexts (e.g., Personal, Business). Transactions are tagged to the active wallet. Switch wallets via the avatar or wallet pill on the home screen.',
+  },
+  {
     title: 'Categories',
-    desc: 'Built-in categories cover common expenses. Add custom ones in the transaction form — each gets a unique colour. Remove custom categories from transtion page.',
+    desc: 'Built-in categories cover common expenses. Add custom ones in the transaction form — each gets a unique color. Free users can add up to 3 custom categories.',
   },
   {
-    title: 'Profile & Settings',
-    desc: 'Tap Edit Profile on your profile card to update your name, age, or photo. Change theme and currency in Preferences anytime.',
+    title: 'App Lock (Pro)',
+    desc: 'Secure your financial data with a 4-digit PIN. Enable this in Settings → Preferences. The lock triggers whenever you return to the app.',
   },
   {
-    title: 'Backing Up',
-    desc: 'Settings → Data Management → Download Data exports a full JSON file of all your transactions, categories, and profile. Keep this file — it is your only way to restore your account.',
+    title: 'Backing Up & Exporting',
+    desc: 'Download a JSON backup of everything. Pro users can also export transactions to CSV for Excel, or use Passcode Export to password-protect their backup files.',
   },
   {
     title: 'Restoring an Account',
-    desc: 'On the Welcome screen tap Log In, then upload your backup JSON file. Everything — transactions, settings, and profile picture — will be fully restored.',
-  },
-  {
-    title: 'Logging Out',
-    desc: 'Tap Log Out at the bottom of Settings. You can download a backup first. After logout, all data is cleared from the device.',
+    desc: 'On the Welcome screen tap Log In, then upload your backup JSON, encrypted (.enc), or CSV file. Everything will be fully restored.',
   },
   {
     title: 'Privacy',
@@ -61,15 +61,18 @@ export default function AppGuideScreen({ navigation }) {
       toValue: 0,
       useNativeDriver: true,
       damping: 26,
-      stiffness: 240,  // was 24 (typo) — now animates at the correct speed
+      stiffness: 240,
       mass: 0.9,
     }).start();
   }, []);
 
-  // Instant close — no exit animation.
-  // The spring exit was causing a grey flash (transparent modal background
-  // revealing itself while the slide played). Instant goBack() is clean.
-  const handleClose = () => navigation.goBack();
+  // Graceful slide-down exit
+  const handleClose = () => {
+    Animated.spring(slideAnim, {
+      toValue: SCREEN_HEIGHT, useNativeDriver: true,
+      damping: 26, stiffness: 240, mass: 0.9
+    }).start(() => navigation.goBack());
+  };
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -83,7 +86,7 @@ export default function AppGuideScreen({ navigation }) {
     <View style={styles.root}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <ImageBackground
-        source={require('../../assets/splash-icon.png')}
+        source={require('../../assets/background.png')}
         style={styles.bg}
         resizeMode="cover"
       >
@@ -99,7 +102,7 @@ export default function AppGuideScreen({ navigation }) {
           <View style={styles.titleAccent} />
 
           <Text style={styles.intro}>
-            A quick reference for every feature in Finova.
+            A complete reference for Finova Free and Pro features.
           </Text>
 
           {GUIDE_SECTIONS.map((section, i) => (
@@ -114,7 +117,7 @@ export default function AppGuideScreen({ navigation }) {
             </View>
           ))}
 
-          <Text style={styles.footnote}>Finova v2.8.0 · All data stored locally.</Text>
+          <Text style={styles.footnote}>Finova v3.0.0 · Your data, your privacy.</Text>
           <View style={{ height: 40 }} />
         </ScrollView>
         </Animated.View>

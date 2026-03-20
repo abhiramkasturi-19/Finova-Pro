@@ -108,17 +108,21 @@ export default function StatsScreen() {
   const now = new Date();
   const s   = makeStyles(colors);
 
-  const filtered = useMemo(() => activeTransactions.filter(t => {
-    const d = new Date(t.date);
-    switch (activeFilter) {
-      case 'Week':    return (now - d) / 86400000 <= 7;
-      case 'Month':   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      case '3 Month': return (now - d) / 86400000 <= 90;
-      case '6 Month': return (now - d) / 86400000 <= 180;
-      case 'Year':    return d.getFullYear() === viewYear;
-      default:        return true;
-    }
-  }), [activeTransactions, activeFilter, viewYear]);
+  const filtered = useMemo(() => {
+    const today = new Date();
+    return activeTransactions.filter(t => {
+      const d = new Date(t.date);
+      const diff = (today - d) / 86400000;
+      switch (activeFilter) {
+        case 'Week':    return diff >= 0 && diff <= 7;
+        case 'Month':   return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+        case '3 Month': return diff >= 0 && diff <= 90;
+        case '6 Month': return diff >= 0 && diff <= 180;
+        case 'Year':    return d.getFullYear() === viewYear;
+        default:        return true;
+      }
+    });
+  }, [activeTransactions, activeFilter, viewYear]);
 
   const totalInc = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExp = filtered.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
