@@ -58,7 +58,7 @@ export default function LoginScreen({ navigation }) {
     <View style={styles.root}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <ImageBackground
-        source={require('../../assets/splash-icon.png')}
+        source={require('../../assets/background.png')}
         style={styles.bg}
         resizeMode="cover"
       >

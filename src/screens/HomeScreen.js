@@ -1,3 +1,6 @@
+// src/screens/HomeScreen.js
+// Finova v3.0 — wallet-aware (activeTransactions + wallet name on card)
+
 import React from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
@@ -13,15 +16,25 @@ import { getCat } from '../data/categories';
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function HomeScreen({ navigation }) {
-  const { transactions, settings, customCategories } = useApp();
+  const {
+    activeTransactions, settings, customCategories,
+    wallets, activeWalletId,
+  } = useApp();
+
   const colors = settings.darkMode ? darkColors : lightColors;
   const cur    = settings.currency;
   const now    = new Date();
   const fmt    = n => `${cur}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
   const s      = makeStyles(colors);
 
-  // ── Current month only ─────────────────────────────────────────────────────
-  const monthTxns    = transactions.filter(t => {
+  // ── Active wallet info ─────────────────────────────────────────────────────
+  const activeWallet = (wallets || []).find(w => w.id === activeWalletId);
+  const walletLabel  = activeWallet
+    ? `${activeWallet.icon} ${activeWallet.name}`
+    : '💳 Personal';
+
+  // ── Current month, wallet-filtered ────────────────────────────────────────
+  const monthTxns    = activeTransactions.filter(t => {
     const d = new Date(t.date);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
@@ -40,8 +53,7 @@ export default function HomeScreen({ navigation }) {
     const key = isCustom ? 'custom_' + t.customCategory.trim().toLowerCase() : t.category;
     if (!catMap[key]) {
       const cat = getCat(t.category);
-      let color = cat.color;
-      let label = cat.label;
+      let color = cat.color, label = cat.label;
       if (isCustom) {
         label = t.customCategory.trim();
         const saved = (customCategories.expense || []).find(c => c.name.toLowerCase() === label.toLowerCase());
@@ -54,11 +66,11 @@ export default function HomeScreen({ navigation }) {
   const donutData  = Object.values(catMap).sort((a, b) => b.value - a.value);
   const donutTotal = donutData.reduce((a, d) => a + d.value, 0);
 
-  const recent   = transactions.slice(0, 5);
+  // Recent 5 from active wallet
+  const recent   = activeTransactions.slice(0, 5);
   const hour     = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  // Avatar: profile image if set, otherwise first letter
   const profileImage = settings.profileImage || '';
   const initials     = (settings.name || 'U')[0].toUpperCase();
 
@@ -72,22 +84,30 @@ export default function HomeScreen({ navigation }) {
             <Text style={s.greeting}>{greeting} 👋</Text>
             <Text style={s.username} numberOfLines={1} ellipsizeMode="tail">{settings.name || 'User'}</Text>
           </View>
-          {/* Profile avatar — photo if available, initial otherwise */}
-          <View style={s.avatarWrap}>
+          <TouchableOpacity onPress={() => navigation.navigate('Wallets')} activeOpacity={0.8} style={s.avatarWrap}>
             {profileImage
               ? <Image source={{ uri: profileImage }} style={s.avatarImg} />
               : <View style={s.avatarFallback}>
                   <Text style={s.avatarText}>{initials}</Text>
                 </View>
             }
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Wallet Card */}
         <View style={s.walletCard}>
           <View style={s.walletTop}>
             <Text style={s.walletLabel}>Wallet Balance</Text>
-            <View style={[s.badge, { backgroundColor: badgeBg }]}>
+            <View style={{ flex: 1 }} />
+            {/* Wallet name pill */}
+            <TouchableOpacity
+              style={s.walletPill}
+              onPress={() => navigation.navigate('Wallets')}
+              activeOpacity={0.75}
+            >
+              <Text style={s.walletPillText}>{walletLabel}</Text>
+            </TouchableOpacity>
+            <View style={[s.badge, { backgroundColor: badgeBg, marginLeft: 8 }]}>
               <Text style={s.badgeText}>{pctLabel}</Text>
             </View>
           </View>
@@ -161,7 +181,6 @@ export default function HomeScreen({ navigation }) {
         </View>
 
       </ScrollView>
-      {/* FAB removed — + lives in the floating tab bar */}
     </SafeAreaView>
   );
 }
@@ -171,23 +190,25 @@ const makeStyles = (colors) => StyleSheet.create({
   scroll:  { flex: 1 },
   content: { padding: spacing.md, paddingTop: 50, paddingBottom: 100 },
 
-  // Header
   header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
   greeting:     { fontSize: 15, color: colors.textMuted, fontFamily: fonts.regular },
   username:     { fontSize: 25, color: colors.textPrimary, fontFamily: fonts.heavy },
 
-  // Avatar — circular, 44px
   avatarWrap:     { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
   avatarImg:      { width: 44, height: 44, borderRadius: 22 },
   avatarFallback: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   avatarText:     { fontSize: 17, color: colors.activePill, fontFamily: fonts.bold },
 
-  // Wallet card
-  walletCard:    { backgroundColor: colors.accent, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg },
-  walletTop:     { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  walletLabel:   { fontSize: 13, color: colors.activePill, fontFamily: fonts.bold },
-  badge:         { borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 3, marginLeft: 8 },
-  badgeText:     { color: '#fff', fontSize: 10, fontFamily: fonts.heavy },
+  walletCard:  { backgroundColor: colors.accent, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg },
+  walletTop:   { flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'nowrap' },
+  walletLabel: { fontSize: 13, color: colors.activePill, fontFamily: fonts.bold },
+
+  walletPill:     { backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 3 },
+  walletPillText: { color: colors.activePill, fontSize: 10, fontFamily: fonts.bold },
+
+  badge:    { borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 3 },
+  badgeText:{ color: '#fff', fontSize: 10, fontFamily: fonts.heavy },
+
   balanceAmount: { fontSize: 42, color: colors.activePill, marginBottom: 4, fontFamily: fonts.heavy },
   walletDate:    { fontSize: 11, color: colors.activePill, marginBottom: spacing.md, fontFamily: fonts.regular },
 
@@ -197,7 +218,6 @@ const makeStyles = (colors) => StyleSheet.create({
   subAmount:  { fontSize: 16, marginTop: 4, fontFamily: fonts.bold },
   subDivider: { width: 1, backgroundColor: colors.border },
 
-  // Cards
   card:       { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg },
   sectionSub: { fontSize: 14, color: colors.textPrimary, marginTop: 2, marginBottom: 4, fontFamily: fonts.regular },
   chartWrap:  { alignItems: 'center', paddingVertical: spacing.md },

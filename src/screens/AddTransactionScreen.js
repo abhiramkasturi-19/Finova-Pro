@@ -1,3 +1,6 @@
+// src/screens/AddTransactionScreen.js
+// Finova v3.0 — handles addCustomCategory 'limit_reached' (Pro gate on custom categories)
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
@@ -12,9 +15,8 @@ const SCREEN_H = Dimensions.get('window').height;
 
 const pad = (n) => String(n).padStart(2, '0');
 
-// ─── Error Modal (invalid amount / date / missing category name) ──────────────
-
-function ErrorModal({ visible, icon, title, body, onClose }) {
+// ─── Error Modal ──────────────────────────────────────────────────────────────
+function ErrorModal({ visible, icon, title, body, onClose, actionLabel, onAction }) {
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <View style={cm.backdrop}>
@@ -24,8 +26,13 @@ function ErrorModal({ visible, icon, title, body, onClose }) {
           </View>
           <Text style={cm.title}>{title}</Text>
           <Text style={cm.body}>{body}</Text>
-          <TouchableOpacity style={cm.okBtn} onPress={onClose} activeOpacity={0.84}>
-            <Text style={cm.okBtnText}>Got It</Text>
+          {actionLabel && onAction && (
+            <TouchableOpacity style={cm.actionBtn} onPress={onAction} activeOpacity={0.84}>
+              <Text style={cm.actionBtnText}>{actionLabel}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={[cm.okBtn, actionLabel ? cm.okBtnSecondary : null]} onPress={onClose} activeOpacity={0.84}>
+            <Text style={[cm.okBtnText, actionLabel ? cm.okBtnTextSecondary : null]}>Got It</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -34,7 +41,6 @@ function ErrorModal({ visible, icon, title, body, onClose }) {
 }
 
 // ─── Delete Category Confirm Modal ────────────────────────────────────────────
-
 function DeleteCatModal({ visible, catName, onCancel, onConfirm }) {
   return (
     <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onCancel}>
@@ -61,12 +67,11 @@ function DeleteCatModal({ visible, catName, onCancel, onConfirm }) {
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-
 export default function AddTransactionScreen({ navigation, route }) {
   const {
     addTransaction, editTransaction,
     addCustomCategory, deleteCustomCategory,
-    customCategories, settings,
+    customCategories, settings, isPro,
   } = useApp();
   const colors = settings.darkMode ? darkColors : lightColors;
 
@@ -84,9 +89,7 @@ export default function AddTransactionScreen({ navigation, route }) {
 
   const [type,           setType          ] = useState(editMode?.type     || 'expense');
   const [amount,         setAmount        ] = useState(editMode ? formatNumber(editMode.amount.toString()) : '');
-  // When editing a transaction whose category was saved as 'others' + customCategory
-  // (meaning it was a saved custom cat), restore the internal 'custom_<name>' key
-  // so the correct chip is highlighted in the category picker.
+
   const initCategory = (() => {
     if (!editMode) return type === 'expense' ? 'food' : 'salary';
     if (editMode.category === 'others' && editMode.customCategory?.trim()) {
@@ -107,33 +110,27 @@ export default function AddTransactionScreen({ navigation, route }) {
   const [showNewCatBox,  setShowNewCatBox ] = useState(false);
   const [showDateTime,   setShowDateTime  ] = useState(false);
 
-  // Modal state
-  const [errorModal,     setErrorModal    ] = useState({ visible: false, icon: '', title: '', body: '' });
+  const [errorModal,     setErrorModal    ] = useState({ visible: false, icon: '', title: '', body: '', actionLabel: '', onAction: null });
   const [deleteCatModal, setDeleteCatModal] = useState({ visible: false, catName: '' });
 
-  const showError  = (icon, title, body) => setErrorModal({ visible: true, icon, title, body });
-  const closeError = () => setErrorModal(prev => ({ ...prev, visible: false }));
+  const showError  = (icon, title, body, actionLabel, onAction) =>
+    setErrorModal({ visible: true, icon, title, body, actionLabel: actionLabel || '', onAction: onAction || null });
+  const closeError = () => setErrorModal(prev => ({ ...prev, visible: false, onAction: null }));
 
   const baseCategories  = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const savedCustomCats = (customCategories?.[type] || []);
   const s = makeStyles(colors);
 
-  // ── Slide animation (slide up on open, slide down on close) ─────────────────
+  // ── Slide animation ──────────────────────────────────────────────────────────
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
 
   useEffect(() => {
     Animated.spring(slideAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      damping: 28,
-      stiffness: 260,
-      mass: 0.9,
+      toValue: 0, useNativeDriver: true,
+      damping: 28, stiffness: 260, mass: 0.9,
     }).start();
   }, []);
 
-  // Close — instant dismiss (no exit animation).
-  // The spring exit was causing a 200-300ms grey flash as the transparentModal
-  // background revealed itself while the slide played. Instant close is cleaner.
   const handleClose = (onDone) => {
     if (onDone) onDone();
     navigation.goBack();
@@ -141,16 +138,29 @@ export default function AddTransactionScreen({ navigation, route }) {
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleClose();
-      return true;
+      handleClose(); return true;
     });
     return () => sub.remove();
   }, []);
 
+  // ── Add new custom category — Pro gate on > 3 ────────────────────────────────
   const handleAddNewCat = () => {
     const name = newCatInput.trim();
     if (!name) return;
-    addCustomCategory(type, name);
+
+    const result = addCustomCategory(type, name);
+
+    if (result === 'limit_reached') {
+      showError(
+        '🏷️',
+        'Category Limit Reached',
+        'Free accounts can save up to 3 custom categories. Upgrade to Pro for unlimited categories.',
+        '👑 Upgrade to Pro',
+        () => { closeError(); navigation.navigate('ProPaywall'); }
+      );
+      return;
+    }
+
     setCategory('custom_' + name.toLowerCase());
     setCustomCategory(name);
     setNewCatInput('');
@@ -205,20 +215,16 @@ export default function AddTransactionScreen({ navigation, route }) {
     const finalCustom = isCustom ? customCategory : (category === 'others' ? customCategory.trim() : '');
     const txnData     = { type, amount: n, category: finalCatId, customCategory: finalCustom, date: builtDate, note };
 
-    // Animate close first, then save — keeps the transition smooth
     handleClose(() => {
       if (editMode) {
         editTransaction({ ...editMode, ...txnData });
       } else {
         addTransaction(txnData);
       }
-      navigation.goBack();
     });
   };
 
   return (
-    // Animated.View wraps the entire screen so the spring translateY controls
-    // the slide-up (open) and slide-down (close) without any native modal flash.
     <Animated.View style={[sa.root, { transform: [{ translateY: slideAnim }] }]}>
       <SafeAreaView style={s.safe}>
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -231,215 +237,213 @@ export default function AddTransactionScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
 
-        {/* Type Toggle */}
-        <View style={s.toggleWrap}>
-          <TouchableOpacity
-            style={[s.toggleBtn, type === 'expense' && s.toggleActiveExpense]}
-            onPress={() => { setType('expense'); setCategory('food'); setCustomCategory(''); setShowNewCatBox(false); }}
-          >
-            <Text style={[s.toggleText, type === 'expense' && s.toggleTextActive]}>Expense</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[s.toggleBtn, type === 'income' && s.toggleActiveIncome]}
-            onPress={() => { setType('income'); setCategory('salary'); setCustomCategory(''); setShowNewCatBox(false); }}
-          >
-            <Text style={[s.toggleText, type === 'income' && s.toggleTextActive]}>Income</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Amount */}
-        <View style={s.amountCard}>
-          <Text style={s.amountLabel}>AMOUNT</Text>
-          <View style={s.amountRow}>
-            <Text style={s.currencySymbol}>{settings.currency}</Text>
-            <TextInput
-              style={s.amountInput}
-              value={amount}
-              onChangeText={(v) => setAmount(formatNumber(v))}
-              placeholder="0.00"
-              placeholderTextColor={colors.border}
-              keyboardType="decimal-pad"
-              maxLength={12}
-            />
-          </View>
-        </View>
-
-        {/* Category */}
-        <Text style={s.fieldLabel}>CATEGORY</Text>
-        <View style={s.catGrid}>
-          {baseCategories.map(c => (
+          {/* Type Toggle */}
+          <View style={s.toggleWrap}>
             <TouchableOpacity
-              key={c.id}
-              style={[s.catChip, category === c.id && { backgroundColor: c.color, borderColor: c.color }]}
-              onPress={() => { setCategory(c.id); setCustomCategory(''); setShowNewCatBox(false); }}
+              style={[s.toggleBtn, type === 'expense' && s.toggleActiveExpense]}
+              onPress={() => { setType('expense'); setCategory('food'); setCustomCategory(''); setShowNewCatBox(false); }}
             >
-              <Text style={s.catEmoji}>{c.emoji}</Text>
-              <Text style={[s.catLabel, category === c.id && { color: '#fff' }]}>{c.label}</Text>
+              <Text style={[s.toggleText, type === 'expense' && s.toggleTextActive]}>Expense</Text>
             </TouchableOpacity>
-          ))}
-
-          {savedCustomCats.map(cat => {
-            const chipKey  = 'custom_' + cat.name.toLowerCase();
-            const isActive = category === chipKey;
-            return (
-              <TouchableOpacity
-                key={chipKey}
-                style={[s.catChip, s.catChipCustom, isActive && { backgroundColor: cat.color, borderColor: cat.color, borderStyle: 'solid' }]}
-                onPress={() => { setCategory(chipKey); setCustomCategory(cat.name); setShowNewCatBox(false); }}
-                onLongPress={() => handleDeleteCustomCat(cat.name)}
-                delayLongPress={500}
-              >
-                <Text style={s.catEmoji}>📦</Text>
-                <Text style={[s.catLabel, isActive && { color: '#fff' }]}>{cat.name}</Text>
-              </TouchableOpacity>
-            );
-          })}
-
-          <TouchableOpacity style={[s.catChip, s.catChipAdd]} onPress={() => { setShowNewCatBox(v => !v); }}>
-            <Text style={s.catAddIcon}>＋</Text>
-            <Text style={[s.catLabel, { color: colors.accent }]}>New</Text>
-          </TouchableOpacity>
-        </View>
-
-        {showNewCatBox && (
-          <View style={s.newCatWrap}>
-            <TextInput
-              style={s.newCatInput}
-              value={newCatInput}
-              onChangeText={setNewCatInput}
-              placeholder="Category name e.g. Gym, Netflix..."
-              placeholderTextColor={colors.textMuted}
-              maxLength={30}
-              autoFocus
-              onSubmitEditing={handleAddNewCat}
-            />
             <TouchableOpacity
-              style={[s.newCatSaveBtn, { opacity: newCatInput.trim() ? 1 : 0.4 }]}
-              onPress={handleAddNewCat}
-              disabled={!newCatInput.trim()}
+              style={[s.toggleBtn, type === 'income' && s.toggleActiveIncome]}
+              onPress={() => { setType('income'); setCategory('salary'); setCustomCategory(''); setShowNewCatBox(false); }}
             >
-              <Text style={s.newCatSaveBtnText}>Save</Text>
+              <Text style={[s.toggleText, type === 'income' && s.toggleTextActive]}>Income</Text>
             </TouchableOpacity>
           </View>
-        )}
 
-        {category === 'others' && (
-          <>
-            <Text style={s.fieldLabel}>CUSTOM CATEGORY NAME</Text>
-            <View style={s.customCatWrap}>
-              <Text style={s.customCatIcon}>📦</Text>
+          {/* Amount */}
+          <View style={s.amountCard}>
+            <Text style={s.amountLabel}>AMOUNT</Text>
+            <View style={s.amountRow}>
+              <Text style={s.currencySymbol}>{settings.currency}</Text>
               <TextInput
-                style={s.customCatInput}
-                value={customCategory}
-                onChangeText={setCustomCategory}
-                placeholder="e.g. Gym, Netflix, Travel..."
-                placeholderTextColor={colors.textMuted}
-                maxLength={30}
+                style={s.amountInput}
+                value={amount}
+                onChangeText={(v) => setAmount(formatNumber(v))}
+                placeholder="0.00"
+                placeholderTextColor={colors.border}
+                keyboardType="decimal-pad"
+                maxLength={12}
               />
             </View>
-          </>
-        )}
-
-        {/* Note */}
-        <Text style={s.fieldLabel}>NOTE (OPTIONAL)</Text>
-        <TextInput
-          style={s.noteInput}
-          value={note}
-          onChangeText={setNote}
-          placeholder="Add a note..."
-          placeholderTextColor={colors.textMuted}
-          multiline
-        />
-
-        {/* Collapsible Date & Time */}
-        <TouchableOpacity style={s.sectionHeader} onPress={() => setShowDateTime(!showDateTime)} activeOpacity={0.7}>
-          <Text style={s.fieldLabel}>DATE & TIME</Text>
-          <Text style={s.chevron}>{showDateTime ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
-
-        {showDateTime && (
-          <View style={s.collapsibleContent}>
-            <Text style={s.subFieldLabel}>DATE</Text>
-            <View style={s.dateRow}>
-              <View style={s.dateGroup}>
-                <Text style={s.dateFieldLabel}>DD</Text>
-                <TextInput style={s.dateInput} value={day} onChangeText={v => setDay(v.replace(/[^0-9]/g,'').slice(0,2))} keyboardType="number-pad" maxLength={2} placeholder="DD" placeholderTextColor={colors.textMuted}/>
-              </View>
-              <Text style={s.dateSep}>/</Text>
-              <View style={s.dateGroup}>
-                <Text style={s.dateFieldLabel}>MM</Text>
-                <TextInput style={s.dateInput} value={month} onChangeText={v => setMonth(v.replace(/[^0-9]/g,'').slice(0,2))} keyboardType="number-pad" maxLength={2} placeholder="MM" placeholderTextColor={colors.textMuted}/>
-              </View>
-              <Text style={s.dateSep}>/</Text>
-              <View style={s.dateGroup}>
-                <Text style={s.dateFieldLabel}>YYYY</Text>
-                <TextInput style={[s.dateInput,{width:70}]} value={year} onChangeText={v => setYear(v.replace(/[^0-9]/g,'').slice(0,4))} keyboardType="number-pad" maxLength={4} placeholder="YYYY" placeholderTextColor={colors.textMuted}/>
-              </View>
-            </View>
-
-            <Text style={s.subFieldLabel}>TIME</Text>
-            <View style={s.dateRow}>
-              <View style={s.dateGroup}>
-                <Text style={s.dateFieldLabel}>HH</Text>
-                <TextInput style={s.dateInput} value={hour} onChangeText={v => setHour(v.replace(/[^0-9]/g,'').slice(0,2))} keyboardType="number-pad" maxLength={2} placeholder="HH" placeholderTextColor={colors.textMuted}/>
-              </View>
-              <Text style={s.dateSep}>:</Text>
-              <View style={s.dateGroup}>
-                <Text style={s.dateFieldLabel}>MM</Text>
-                <TextInput style={s.dateInput} value={minute} onChangeText={v => setMinute(v.replace(/[^0-9]/g,'').slice(0,2))} keyboardType="number-pad" maxLength={2} placeholder="MM" placeholderTextColor={colors.textMuted}/>
-              </View>
-            </View>
           </View>
-        )}
 
-        {/* Submit */}
-        <TouchableOpacity
-          style={[s.submitBtn, type === 'income' && s.submitBtnIncome]}
-          onPress={handleSubmit}
-          activeOpacity={0.85}
-        >
-          <Text style={s.submitText}>
-            {editMode ? 'Save Changes' : type === 'expense' ? '— Record Expense' : '+ Record Income'}
-          </Text>
-        </TouchableOpacity>
+          {/* Category */}
+          <Text style={s.fieldLabel}>CATEGORY</Text>
+          <View style={s.catGrid}>
+            {baseCategories.map(c => (
+              <TouchableOpacity
+                key={c.id}
+                style={[s.catChip, category === c.id && { backgroundColor: c.color, borderColor: c.color }]}
+                onPress={() => { setCategory(c.id); setCustomCategory(''); setShowNewCatBox(false); }}
+              >
+                <Text style={s.catEmoji}>{c.emoji}</Text>
+                <Text style={[s.catLabel, category === c.id && { color: '#fff' }]}>{c.label}</Text>
+              </TouchableOpacity>
+            ))}
 
-      </ScrollView>
+            {savedCustomCats.map(cat => {
+              const chipKey  = 'custom_' + cat.name.toLowerCase();
+              const isActive = category === chipKey;
+              return (
+                <TouchableOpacity
+                  key={chipKey}
+                  style={[s.catChip, s.catChipCustom, isActive && { backgroundColor: cat.color, borderColor: cat.color, borderStyle: 'solid' }]}
+                  onPress={() => { setCategory(chipKey); setCustomCategory(cat.name); setShowNewCatBox(false); }}
+                  onLongPress={() => handleDeleteCustomCat(cat.name)}
+                  delayLongPress={500}
+                >
+                  <Text style={s.catEmoji}>📦</Text>
+                  <Text style={[s.catLabel, isActive && { color: '#fff' }]}>{cat.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
 
-      {/* Custom Modals */}
-      <ErrorModal
-        visible={errorModal.visible}
-        icon={errorModal.icon}
-        title={errorModal.title}
-        body={errorModal.body}
-        onClose={closeError}
-      />
-      <DeleteCatModal
-        visible={deleteCatModal.visible}
-        catName={deleteCatModal.catName}
-        onCancel={() => setDeleteCatModal({ visible: false, catName: '' })}
-        onConfirm={confirmDelete}
-      />
-    </SafeAreaView>
-  </Animated.View>
+            {/* + New chip — shows Pro hint if at limit */}
+            <TouchableOpacity
+              style={[s.catChip, s.catChipAdd]}
+              onPress={() => { setShowNewCatBox(v => !v); }}
+            >
+              <Text style={s.catAddIcon}>＋</Text>
+              <Text style={[s.catLabel, { color: colors.accent }]}>
+                {!isPro && savedCustomCats.length >= 3 ? 'Pro' : 'New'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {showNewCatBox && (
+            <View style={s.newCatWrap}>
+              <TextInput
+                style={s.newCatInput}
+                value={newCatInput}
+                onChangeText={setNewCatInput}
+                placeholder="Category name e.g. Gym, Netflix..."
+                placeholderTextColor={colors.textMuted}
+                maxLength={30}
+                autoFocus
+                onSubmitEditing={handleAddNewCat}
+              />
+              <TouchableOpacity
+                style={[s.newCatSaveBtn, { opacity: newCatInput.trim() ? 1 : 0.4 }]}
+                onPress={handleAddNewCat}
+                disabled={!newCatInput.trim()}
+              >
+                <Text style={s.newCatSaveBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {category === 'others' && (
+            <>
+              <Text style={s.fieldLabel}>CUSTOM CATEGORY NAME</Text>
+              <View style={s.customCatWrap}>
+                <Text style={s.customCatIcon}>📦</Text>
+                <TextInput
+                  style={s.customCatInput}
+                  value={customCategory}
+                  onChangeText={setCustomCategory}
+                  placeholder="e.g. Gym, Netflix, Travel..."
+                  placeholderTextColor={colors.textMuted}
+                  maxLength={30}
+                />
+              </View>
+            </>
+          )}
+
+          {/* Note */}
+          <Text style={s.fieldLabel}>NOTE (OPTIONAL)</Text>
+          <TextInput
+            style={s.noteInput}
+            value={note}
+            onChangeText={setNote}
+            placeholder="Add a note..."
+            placeholderTextColor={colors.textMuted}
+            multiline
+          />
+
+          {/* Collapsible Date & Time */}
+          <TouchableOpacity style={s.sectionHeader} onPress={() => setShowDateTime(!showDateTime)} activeOpacity={0.7}>
+            <Text style={s.fieldLabel}>DATE & TIME</Text>
+            <Text style={s.chevron}>{showDateTime ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {showDateTime && (
+            <View style={s.collapsibleContent}>
+              <Text style={s.subFieldLabel}>DATE</Text>
+              <View style={s.dateRow}>
+                <View style={s.dateGroup}>
+                  <Text style={s.dateFieldLabel}>DD</Text>
+                  <TextInput style={s.dateInput} value={day}    onChangeText={v => setDay(v.replace(/[^0-9]/g,'').slice(0,2))}    keyboardType="number-pad" maxLength={2} placeholder="DD" placeholderTextColor={colors.textMuted}/>
+                </View>
+                <Text style={s.dateSep}>/</Text>
+                <View style={s.dateGroup}>
+                  <Text style={s.dateFieldLabel}>MM</Text>
+                  <TextInput style={s.dateInput} value={month}  onChangeText={v => setMonth(v.replace(/[^0-9]/g,'').slice(0,2))}  keyboardType="number-pad" maxLength={2} placeholder="MM" placeholderTextColor={colors.textMuted}/>
+                </View>
+                <Text style={s.dateSep}>/</Text>
+                <View style={s.dateGroup}>
+                  <Text style={s.dateFieldLabel}>YYYY</Text>
+                  <TextInput style={[s.dateInput,{width:70}]} value={year} onChangeText={v => setYear(v.replace(/[^0-9]/g,'').slice(0,4))} keyboardType="number-pad" maxLength={4} placeholder="YYYY" placeholderTextColor={colors.textMuted}/>
+                </View>
+              </View>
+
+              <Text style={s.subFieldLabel}>TIME</Text>
+              <View style={s.dateRow}>
+                <View style={s.dateGroup}>
+                  <Text style={s.dateFieldLabel}>HH</Text>
+                  <TextInput style={s.dateInput} value={hour}   onChangeText={v => setHour(v.replace(/[^0-9]/g,'').slice(0,2))}   keyboardType="number-pad" maxLength={2} placeholder="HH" placeholderTextColor={colors.textMuted}/>
+                </View>
+                <Text style={s.dateSep}>:</Text>
+                <View style={s.dateGroup}>
+                  <Text style={s.dateFieldLabel}>MM</Text>
+                  <TextInput style={s.dateInput} value={minute} onChangeText={v => setMinute(v.replace(/[^0-9]/g,'').slice(0,2))} keyboardType="number-pad" maxLength={2} placeholder="MM" placeholderTextColor={colors.textMuted}/>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Submit */}
+          <TouchableOpacity
+            style={[s.submitBtn, type === 'income' && s.submitBtnIncome]}
+            onPress={handleSubmit}
+            activeOpacity={0.85}
+          >
+            <Text style={s.submitText}>
+              {editMode ? 'Save Changes' : type === 'expense' ? '— Record Expense' : '+ Record Income'}
+            </Text>
+          </TouchableOpacity>
+
+        </ScrollView>
+
+        <ErrorModal
+          visible={errorModal.visible}
+          icon={errorModal.icon}
+          title={errorModal.title}
+          body={errorModal.body}
+          actionLabel={errorModal.actionLabel}
+          onAction={errorModal.onAction}
+          onClose={closeError}
+        />
+        <DeleteCatModal
+          visible={deleteCatModal.visible}
+          catName={deleteCatModal.catName}
+          onCancel={() => setDeleteCatModal({ visible: false, catName: '' })}
+          onConfirm={confirmDelete}
+        />
+      </SafeAreaView>
+    </Animated.View>
   );
 }
 
-// ─── Slide-animation root wrapper ─────────────────────────────────────────────
-// `transparentModal` keeps the underlying screen fully visible behind us.
-// This Animated.View slides up on mount and slides down on dismiss/save,
-// completely eliminating the native white-flash artifact.
 const sa = StyleSheet.create({
-  root: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-  },
+  root: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
 });
-
-// ─── Screen Styles ────────────────────────────────────────────────────────────
 
 const makeStyles = (colors) => StyleSheet.create({
   safe:    { flex: 1, backgroundColor: colors.bg, paddingBottom: -100, paddingTop: -50 },
-  content: { padding: spacing.lg, paddingTop: spacing.xl +20 , paddingBottom: 120 },
+  content: { padding: spacing.lg, paddingTop: spacing.xl + 20, paddingBottom: 120 },
 
   header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
   title:     { fontSize: 22, color: colors.textPrimary, fontFamily: fonts.heavy },
@@ -496,127 +500,34 @@ const makeStyles = (colors) => StyleSheet.create({
   submitText:      { fontSize: 15, color: '#fff', fontFamily: fonts.bold },
 });
 
-// ─── Shared Modal Styles ──────────────────────────────────────────────────────
-
 const cm = StyleSheet.create({
-  // Error card — centered overlay
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 28,
-  },
-  card: {
-    width: '100%',
-    backgroundColor: '#2C3020',
-    borderRadius: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(174,183,132,0.20)',
-  },
+  backdrop:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: 28 },
+  card:      { width: '100%', backgroundColor: '#2C3020', borderRadius: 24, paddingHorizontal: 24, paddingVertical: 28, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(174,183,132,0.20)' },
 
-  // Delete sheet — slides from bottom
-  sheetBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: '#2C3020',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 28,
-    borderWidth: 1,
-    borderColor: 'rgba(174,183,132,0.18)',
-    borderBottomWidth: 0,
-    alignItems: 'center',
-  },
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'flex-end' },
+  sheet:         { backgroundColor: '#2C3020', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 28, borderWidth: 1, borderColor: 'rgba(174,183,132,0.18)', borderBottomWidth: 0, alignItems: 'center' },
 
-  handle: {
-    width: 38, height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(174,183,132,0.35)',
-    marginTop: 12, marginBottom: 24,
-  },
+  handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: 'rgba(174,183,132,0.35)', marginTop: 12, marginBottom: 24 },
 
-  iconRing: {
-    width: 68, height: 68, borderRadius: 34,
-    backgroundColor: 'rgba(174,183,132,0.12)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(174,183,132,0.30)',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 18,
-  },
-  iconRingDanger: {
-    backgroundColor: 'rgba(158,90,90,0.15)',
-    borderColor: 'rgba(158,90,90,0.35)',
-  },
-  iconEmoji: { fontSize: 30 },
+  iconRing:      { width: 68, height: 68, borderRadius: 34, backgroundColor: 'rgba(174,183,132,0.12)', borderWidth: 1.5, borderColor: 'rgba(174,183,132,0.30)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  iconRingDanger:{ backgroundColor: 'rgba(158,90,90,0.15)', borderColor: 'rgba(158,90,90,0.35)' },
+  iconEmoji:     { fontSize: 30 },
 
-  title: {
-    fontFamily: 'Fungis-Heavy',
-    fontSize: 20,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  body: {
-    fontFamily: 'Fungis-Regular',
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.52)',
-    textAlign: 'center',
-    lineHeight: 21,
-    marginBottom: 24,
-  },
-  bodyHighlight: {
-    fontFamily: 'Fungis-Bold',
-    color: '#AEB784',
-  },
+  title: { fontFamily: 'Fungis-Heavy',   fontSize: 20, color: '#FFFFFF', textAlign: 'center', marginBottom: 10 },
+  body:  { fontFamily: 'Fungis-Regular', fontSize: 13, color: 'rgba(255,255,255,0.52)', textAlign: 'center', lineHeight: 21, marginBottom: 24 },
+  bodyHighlight: { fontFamily: 'Fungis-Bold', color: '#AEB784' },
 
-  okBtn: {
-    width: '100%',
-    backgroundColor: '#AEB784',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  okBtnText: {
-    fontFamily: 'Fungis-Bold',
-    fontSize: 15,
-    color: '#222629',
-    letterSpacing: 0.4,
-  },
+  actionBtn:     { width: '100%', backgroundColor: '#AEB784', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 10 },
+  actionBtnText: { fontFamily: 'Fungis-Bold', fontSize: 15, color: '#222629', letterSpacing: 0.4 },
 
-  destructiveBtn: {
-    width: '100%',
-    backgroundColor: 'rgba(158,90,90,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(158,90,90,0.45)',
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  destructiveBtnText: {
-    fontFamily: 'Fungis-Bold',
-    fontSize: 15,
-    color: '#D4918F',
-    letterSpacing: 0.3,
-  },
+  okBtn:           { width: '100%', backgroundColor: '#AEB784', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  okBtnSecondary:  { backgroundColor: 'rgba(255,255,255,0.06)' },
+  okBtnText:       { fontFamily: 'Fungis-Bold', fontSize: 15, color: '#222629', letterSpacing: 0.4 },
+  okBtnTextSecondary: { color: 'rgba(255,255,255,0.40)' },
 
-  ghostBtn: {
-    width: '100%',
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  ghostBtnText: {
-    fontFamily: 'Fungis-Regular',
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.40)',
-  },
+  destructiveBtn:    { width: '100%', backgroundColor: 'rgba(158,90,90,0.18)', borderWidth: 1, borderColor: 'rgba(158,90,90,0.45)', borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginBottom: 12 },
+  destructiveBtnText:{ fontFamily: 'Fungis-Bold', fontSize: 15, color: '#D4918F', letterSpacing: 0.3 },
+
+  ghostBtn:     { width: '100%', borderRadius: 14, paddingVertical: 14, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
+  ghostBtnText: { fontFamily: 'Fungis-Regular', fontSize: 14, color: 'rgba(255,255,255,0.40)' },
 });

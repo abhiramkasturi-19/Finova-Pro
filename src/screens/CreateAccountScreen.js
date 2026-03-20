@@ -192,7 +192,7 @@ export default function CreateAccountScreen({ navigation }) {
   return (
     <View style={styles.root}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-      <ImageBackground source={require('../../assets/splash-icon.png')} style={styles.bg} resizeMode="cover">
+      <ImageBackground source={require('../../assets/background.png')} style={styles.bg} resizeMode="cover">
         <View style={styles.fullOverlay} />
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.kav}>
           <ScrollView
