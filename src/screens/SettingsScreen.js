@@ -32,7 +32,7 @@ function encryptJson(jsonStr, password) {
     let hash = 0;
     for (let i = 0; i < password.length; i++) hash = (hash << 5) - hash + password.charCodeAt(i);
     const key = Array.from(password + salt + hash).map(c => c.charCodeAt(0));
-    
+
     const encoded = encodeURIComponent(jsonStr);
     const hex = Array.from(encoded).map((c, i) => {
       const k = key[i % key.length];
@@ -45,7 +45,7 @@ function encryptJson(jsonStr, password) {
 
 function decryptJson(encStr, password) {
   if (!encStr) return null;
-  
+
   if (encStr.startsWith('FINOVA_ENC:')) {
     try {
       const key = Array.from(password).map(c => c.charCodeAt(0));
@@ -58,15 +58,15 @@ function decryptJson(encStr, password) {
       return decodeURIComponent(chars.join(''));
     } catch { return null; }
   }
-  
+
   if (encStr.startsWith('FINOVA_ENC2:')) {
     try {
       const salt = encStr.slice(12, 18);
-      const hex  = encStr.slice(18);
+      const hex = encStr.slice(18);
       let hash = 0;
       for (let i = 0; i < password.length; i++) hash = (hash << 5) - hash + password.charCodeAt(i);
       const key = Array.from(password + salt + hash).map(c => c.charCodeAt(0));
-      
+
       const chars = [];
       for (let i = 0; i < hex.length; i += 2) {
         const byte = parseInt(hex.slice(i, i + 2), 16);
@@ -87,7 +87,7 @@ const parseCsvBackup = (csvStr, existingWallets = []) => {
   if (lines.length < 2) return null;
   const transactions = [];
   const wallets = [...existingWallets];
-  
+
   if (wallets.length === 0) wallets.push(DEFAULT_WALLET);
 
   for (let i = 1; i < lines.length; i++) {
@@ -107,11 +107,11 @@ const parseCsvBackup = (csvStr, existingWallets = []) => {
     try {
       if (dateRaw.includes('/')) {
         const [d, m, y] = dateRaw.split('/');
-        date = new Date(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T12:00:00Z`).toISOString();
+        date = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T12:00:00Z`).toISOString();
       } else {
         date = new Date(dateRaw).toISOString();
       }
-    } catch(e) {}
+    } catch (e) { }
 
     transactions.push({
       id: (Date.now() + i).toString(),
@@ -126,7 +126,7 @@ const parseCsvBackup = (csvStr, existingWallets = []) => {
   }
   return {
     transactions,
-    settings: null, 
+    settings: null,
     wallets,
     activeWalletId: 'default',
     customCategories: { expense: [], income: [] }
@@ -153,10 +153,10 @@ function CameraIcon({ color }) {
 
 // ─── PIN Setup Modal ──────────────────────────────────────────────────────────
 function PinSetupModal({ visible, onCancel, onSave }) {
-  const [step,    setStep   ] = useState(1);
-  const [pin1,    setPin1   ] = useState('');
-  const [pin2,    setPin2   ] = useState('');
-  const [error,   setError  ] = useState('');
+  const [step, setStep] = useState(1);
+  const [pin1, setPin1] = useState('');
+  const [pin2, setPin2] = useState('');
+  const [error, setError] = useState('');
   const reset = () => { setStep(1); setPin1(''); setPin2(''); setError(''); };
   const handleNext = () => {
     if (pin1.length !== 4) { setError('PIN must be 4 digits'); return; }
@@ -176,8 +176,8 @@ function PinSetupModal({ visible, onCancel, onSave }) {
           <Text style={cm.body}>{step === 1 ? 'Enter a 4-digit PIN to lock Finova.' : 'Re-enter your PIN to verify.'}</Text>
           <TextInput style={cm.pinInput} value={step === 1 ? pin1 : pin2} onChangeText={step === 1 ? setPin1 : setPin2} keyboardType="number-pad" maxLength={4} secureTextEntry placeholder="····" placeholderTextColor="rgba(255,255,255,0.2)" autoFocus />
           {!!error && <Text style={cm.errorText}>{error}</Text>}
-          <TouchableOpacity style={[cm.primaryBtn, { opacity: (step===1?pin1:pin2).length===4?1:0.5 }]} onPress={step===1?handleNext:handleConfirm} disabled={(step===1?pin1:pin2).length!==4}>
-            <Text style={cm.primaryBtnText}>{step===1?'Next':'Enable Lock'}</Text>
+          <TouchableOpacity style={[cm.primaryBtn, { opacity: (step === 1 ? pin1 : pin2).length === 4 ? 1 : 0.5 }]} onPress={step === 1 ? handleNext : handleConfirm} disabled={(step === 1 ? pin1 : pin2).length !== 4}>
+            <Text style={cm.primaryBtnText}>{step === 1 ? 'Next' : 'Enable Lock'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={cm.ghostBtn} onPress={() => { reset(); onCancel(); }}><Text style={cm.ghostBtnText}>Cancel</Text></TouchableOpacity>
         </View>
@@ -189,12 +189,12 @@ function PinSetupModal({ visible, onCancel, onSave }) {
 // ─── Passcode Export Modal ────────────────────────────────────────────────────
 function PasscodeExportModal({ visible, onCancel, onExport }) {
   const [password, setPassword] = useState('');
-  const [confirm,  setConfirm ] = useState('');
-  const [error,    setError   ] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
   const reset = () => { setPassword(''); setConfirm(''); setError(''); };
   const handleExport = () => {
     if (password.length < 4) { setError('Minimum 4 characters'); return; }
-    if (password !== confirm)  { setError('Passwords do not match'); return; }
+    if (password !== confirm) { setError('Passwords do not match'); return; }
     onExport(password); reset();
   };
   return (
@@ -221,7 +221,7 @@ function PasscodeExportModal({ visible, onCancel, onExport }) {
 // ─── Decrypt Import Modal ─────────────────────────────────────────────────────
 function DecryptImportModal({ visible, onCancel, onDecrypt }) {
   const [password, setPassword] = useState('');
-  const [error,    setError   ] = useState('');
+  const [error, setError] = useState('');
   const handleTry = () => {
     const success = onDecrypt(password);
     if (!success) { setError('Incorrect password'); setPassword(''); }
@@ -259,9 +259,9 @@ function LogoutModal({ visible, onCancel, onLogoutOnly, onDownloadLogout, isPro,
           <Text style={{ fontFamily: 'Fungis-Regular', fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: 24, paddingHorizontal: 12 }}>
             Your data is only stored locally. How would you like to proceed?
           </Text>
-          
-          <TouchableOpacity 
-            style={[cm.primaryBtn, { flexDirection: 'column', alignItems: 'center', marginBottom: 12, paddingVertical: 14 }]} 
+
+          <TouchableOpacity
+            style={[cm.primaryBtn, { flexDirection: 'column', alignItems: 'center', marginBottom: 12, paddingVertical: 14 }]}
             onPress={() => isPro ? onDownloadLogout() : onUpgrade()}
           >
             <Text style={cm.primaryBtnText}>📥 Log Out with Download {!isPro && '👑'}</Text>
@@ -270,8 +270,8 @@ function LogoutModal({ visible, onCancel, onLogoutOnly, onDownloadLogout, isPro,
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[cm.destructiveBtn, { flexDirection: 'column', alignItems: 'center', marginBottom: 16, paddingVertical: 14 }]} 
+          <TouchableOpacity
+            style={[cm.destructiveBtn, { flexDirection: 'column', alignItems: 'center', marginBottom: 16, paddingVertical: 14 }]}
             onPress={onLogoutOnly}
           >
             <Text style={cm.destructiveBtnText}>Log Out without Download</Text>
@@ -307,6 +307,45 @@ function ClearDataModal({ visible, onCancel, onConfirm }) {
   );
 }
 
+// ─── Message Modal ────────────────────────────────────────────────────────────
+function MessageModal({ visible, type, title, message, onOk }) {
+  const isError = type === 'error';
+  const ringStyle = isError ? cm.iconRingDanger : cm.iconRing;
+  const icon = isError ? '⚠️' : '✅';
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onOk}>
+      <View style={[cm.backdrop, { justifyContent: 'center', padding: 28 }]}>
+        <View style={[cm.sheet, { borderRadius: 28, paddingBottom: 28, width: '100%', paddingTop: 28 }]}>
+          <View style={ringStyle}><Text style={cm.iconEmoji}>{icon}</Text></View>
+          <Text style={cm.title}>{title}</Text>
+          <Text style={cm.body}>{message}</Text>
+          <TouchableOpacity style={[cm.primaryBtn, { width: '100%', marginBottom: 0 }]} onPress={onOk}>
+            <Text style={cm.primaryBtnText}>Okay</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Restore Confirm Modal ────────────────────────────────────────────────────
+function RestoreConfirmModal({ visible, onCancel, onConfirm }) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onCancel}>
+      <View style={cm.backdrop}>
+        <View style={cm.sheet}>
+          <View style={cm.handle} />
+          <View style={[cm.iconRing, { backgroundColor: 'rgba(174,183,132,0.15)', borderColor: 'rgba(174,183,132,0.35)' }]}><Text style={cm.iconEmoji}>📂</Text></View>
+          <Text style={cm.title}>Restore Data</Text>
+          <Text style={cm.body}>Replace your current data with this backup?</Text>
+          <TouchableOpacity style={[cm.primaryBtn, { marginBottom: 12 }]} onPress={onConfirm}><Text style={cm.primaryBtnText}>Yes, Restore</Text></TouchableOpacity>
+          <TouchableOpacity style={cm.ghostBtn} onPress={onCancel}><Text style={cm.ghostBtnText}>Cancel</Text></TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function SettingsScreen({ navigation }) {
   const {
@@ -315,30 +354,32 @@ export default function SettingsScreen({ navigation }) {
     updateSettings, toggleDarkMode, updatePro, importData, dispatch, isPro, state,
   } = useApp();
 
-  const [showDataManager,     setShowDataManager    ] = useState(false);
-  const [editMode,            setEditMode           ] = useState(false);
-  const [editName,            setEditName           ] = useState('');
-  const [editAge,             setEditAge            ] = useState('');
-  const [editImage,           setEditImage          ] = useState('');
-  const [editCurrency,        setEditCurrency       ] = useState('');
-  const [logoutModalOpen,     setLogoutModalOpen    ] = useState(false);
-  const [clearModalOpen,      setClearModalOpen     ] = useState(false);
-  const [pinSetupOpen,        setPinSetupOpen       ] = useState(false);
-  const [passExportOpen,      setPassExportOpen     ] = useState(false);
-  const [decryptModalOpen,    setDecryptModalOpen   ] = useState(false);
-  const [pendingEncContent,   setPendingEncContent  ] = useState('');
+  const [showDataManager, setShowDataManager] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editAge, setEditAge] = useState('');
+  const [editImage, setEditImage] = useState('');
+  const [editCurrency, setEditCurrency] = useState('');
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [clearModalOpen, setClearModalOpen] = useState(false);
+  const [pinSetupOpen, setPinSetupOpen] = useState(false);
+  const [passExportOpen, setPassExportOpen] = useState(false);
+  const [decryptModalOpen, setDecryptModalOpen] = useState(false);
+  const [pendingEncContent, setPendingEncContent] = useState('');
+  const [restoreConfirmData, setRestoreConfirmData] = useState(null);
+  const [messageModal, setMessageModal] = useState(null);
 
-  const colors      = settings.darkMode ? darkColors : lightColors;
+  const colors = settings.darkMode ? darkColors : lightColors;
   const overlayColor = settings.darkMode ? 'rgba(0,0,0,0.82)' : 'rgba(44,51,32,0.55)';
   const s = makeStyles(colors);
 
-  const openEdit  = () => { setEditName(settings.name || ''); setEditAge(settings.age || ''); setEditImage(settings.profileImage || ''); setEditCurrency(settings.currency || '₹'); setEditMode(true); };
-  const saveEdit  = () => { updateSettings({ name: editName.trim(), age: editAge.trim(), profileImage: editImage, currency: editCurrency }); setEditMode(false); };
+  const openEdit = () => { setEditName(settings.name || ''); setEditAge(settings.age || ''); setEditImage(settings.profileImage || ''); setEditCurrency(settings.currency || '₹'); setEditMode(true); };
+  const saveEdit = () => { updateSettings({ name: editName.trim(), age: editAge.trim(), profileImage: editImage, currency: editCurrency }); setEditMode(false); };
   const cancelEdit = () => setEditMode(false);
 
   const pickProfileImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('Permission needed', 'Allow photo access to change your profile picture.'); return; }
+    if (status !== 'granted') { setMessageModal({ type: 'error', title: 'Permission needed', message: 'Allow photo access to change your profile picture.' }); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.45, base64: true });
     if (!result.canceled && result.assets[0].base64) setEditImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
   };
@@ -349,7 +390,7 @@ export default function SettingsScreen({ navigation }) {
       const fileUri = FileSystem.cacheDirectory + 'finova_backup.json';
       await FileSystem.writeAsStringAsync(fileUri, data);
       await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'Save Finova backup' });
-    } catch { Alert.alert('Error', 'Failed to generate backup'); }
+    } catch { setMessageModal({ type: 'error', title: 'Error', message: 'Failed to generate backup' }); }
   };
 
   const handleCsvExport = async () => {
@@ -365,7 +406,7 @@ export default function SettingsScreen({ navigation }) {
       const fileUri = FileSystem.cacheDirectory + 'finova_transactions.csv';
       await FileSystem.writeAsStringAsync(fileUri, header + rows);
       await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', dialogTitle: 'Export CSV' });
-    } catch { Alert.alert('Error', 'Failed to export CSV'); }
+    } catch { setMessageModal({ type: 'error', title: 'Error', message: 'Failed to export CSV' }); }
   };
 
   const handlePasscodeExport = async (password) => {
@@ -377,7 +418,7 @@ export default function SettingsScreen({ navigation }) {
       const fileUri = FileSystem.cacheDirectory + 'finova_backup.enc';
       await FileSystem.writeAsStringAsync(fileUri, enc);
       await Sharing.shareAsync(fileUri, { mimeType: 'application/octet-stream', dialogTitle: 'Save encrypted backup' });
-    } catch { Alert.alert('Error', 'Encryption failed'); }
+    } catch { setMessageModal({ type: 'error', title: 'Error', message: 'Encryption failed' }); }
   };
 
   const handleUpload = async () => {
@@ -401,26 +442,27 @@ export default function SettingsScreen({ navigation }) {
 
       if (!imported || !Array.isArray(imported.transactions)) throw new Error();
 
-      Alert.alert('Restore Data', 'Replace current data with this backup?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Restore', onPress: () => {
-          if (!imported.settings) {
-            dispatch({ 
-              type: 'LOAD_DATA', 
-              payload: { 
-                ...state, 
-                transactions: [...transactions, ...imported.transactions],
-                wallets: imported.wallets 
-              } 
-            });
-            Alert.alert('Success', 'Transactions imported from CSV');
-          } else {
-            importData(imported);
-            Alert.alert('Success', 'Data restored successfully');
-          }
-        }},
-      ]);
-    } catch { Alert.alert('Error', 'Invalid backup file'); }
+      setRestoreConfirmData(imported);
+    } catch { setMessageModal({ type: 'error', title: 'Error', message: 'Invalid backup file' }); }
+  };
+
+  const confirmRestore = () => {
+    const imported = restoreConfirmData;
+    setRestoreConfirmData(null);
+    if (!imported.settings) {
+      dispatch({
+        type: 'LOAD_DATA',
+        payload: {
+          ...state,
+          transactions: [...transactions, ...imported.transactions],
+          wallets: imported.wallets
+        }
+      });
+      setMessageModal({ type: 'success', title: 'Success', message: 'Transactions imported from CSV' });
+    } else {
+      importData(imported);
+      setMessageModal({ type: 'success', title: 'Success', message: 'Data restored successfully' });
+    }
   };
 
   const handleDecryptImport = (password) => {
@@ -432,7 +474,7 @@ export default function SettingsScreen({ navigation }) {
       setDecryptModalOpen(false);
       setPendingEncContent('');
       importData(imported);
-      Alert.alert('Success', 'Encrypted backup restored');
+      setMessageModal({ type: 'success', title: 'Success', message: 'Encrypted backup restored' });
       return true;
     } catch { return false; }
   };
@@ -590,18 +632,18 @@ export default function SettingsScreen({ navigation }) {
             <View style={s.creditBlock}>
               <Text style={s.creditMadeBy}>crafted by</Text>
               <Text style={s.creditName}>Abhiram Kasturi</Text>
-              <Text style={s.creditFinova}>Finova · v3.0.0</Text>
+              <Text style={s.creditFinova}>Finova · v3.0.2</Text>
             </View>
           </ScrollView>
         </SafeAreaView>
       </ImageBackground>
 
-      <LogoutModal 
-        visible={logoutModalOpen} 
-        onCancel={() => setLogoutModalOpen(false)} 
-        onLogoutOnly={performLogout} 
-        onDownloadLogout={handleDownloadThenLogout} 
-        isPro={isPro} 
+      <LogoutModal
+        visible={logoutModalOpen}
+        onCancel={() => setLogoutModalOpen(false)}
+        onLogoutOnly={performLogout}
+        onDownloadLogout={handleDownloadThenLogout}
+        isPro={isPro}
         onUpgrade={() => {
           setLogoutModalOpen(false);
           navigation.navigate('ProPaywall');
@@ -611,31 +653,39 @@ export default function SettingsScreen({ navigation }) {
       <PinSetupModal visible={pinSetupOpen} onCancel={() => setPinSetupOpen(false)} onSave={p => { updateSettings({ appLockEnabled: true, appLockPin: p }); setPinSetupOpen(false); }} />
       <PasscodeExportModal visible={passExportOpen} onCancel={() => setPassExportOpen(false)} onExport={handlePasscodeExport} />
       <DecryptImportModal visible={decryptModalOpen} onCancel={() => { setDecryptModalOpen(false); setPendingEncContent(''); }} onDecrypt={handleDecryptImport} />
+      <RestoreConfirmModal visible={!!restoreConfirmData} onCancel={() => setRestoreConfirmData(null)} onConfirm={confirmRestore} />
+      <MessageModal
+        visible={!!messageModal}
+        type={messageModal?.type}
+        title={messageModal?.title}
+        message={messageModal?.message}
+        onOk={() => setMessageModal(null)}
+      />
     </View>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
-  bg:   { width, height: '100%', flex: 1 },
+  bg: { width, height: '100%', flex: 1 },
   overlay: { ...StyleSheet.absoluteFillObject },
-  safe:    { flex: 1, paddingBottom: -100, paddingTop: -50 },
-  content: { padding: spacing.lg, paddingTop: spacing.xl + 50, paddingBottom: 60 },
-  title:    { fontSize: 26, color: colors.white, fontFamily: fonts.heavy },
+  safe: { flex: 1, paddingBottom: -100, paddingTop: -50 },
+  content: { padding: spacing.lg, paddingTop: spacing.xl + 50, paddingBottom: 100 },
+  title: { fontSize: 26, color: colors.white, fontFamily: fonts.heavy },
   subtitle: { fontSize: 13, color: colors.white, marginBottom: spacing.lg, fontFamily: fonts.regular },
   profileCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.accent },
-  profileRow:  { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  avatarWrap:  { flexShrink: 0 },
-  avatarImg:   { width: 80, height: 80, borderRadius: 40 },
-  avatar:      { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-  avatarText:  { fontSize: 24, color: colors.activePill, fontFamily: fonts.bold },
+  profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  avatarWrap: { flexShrink: 0 },
+  avatarImg: { width: 80, height: 80, borderRadius: 40 },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 24, color: colors.activePill, fontFamily: fonts.bold },
   profileInfo: { flex: 1 },
   profileName: { fontSize: 18, color: colors.textPrimary, fontFamily: fonts.heavy },
   profileMeta: { fontSize: 12, color: colors.textMuted, marginTop: 3 },
   profileWallet: { fontSize: 11, color: colors.accent, marginTop: 4, fontFamily: fonts.bold },
-  proBadge:     { backgroundColor: '#AEB78422', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: '#AEB78466' },
+  proBadge: { backgroundColor: '#AEB78422', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: '#AEB78466' },
   proBadgeText: { fontSize: 10, color: '#AEB784', fontFamily: fonts.bold },
-  editIconBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
+  editIconBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
   editIconLabel: { fontSize: 12, color: colors.textMuted },
   editModeTitle: { fontSize: 16, color: colors.textPrimary, fontFamily: fonts.heavy, marginBottom: 18 },
   editAvatarBtn: { alignSelf: 'center', position: 'relative', marginBottom: 20 },

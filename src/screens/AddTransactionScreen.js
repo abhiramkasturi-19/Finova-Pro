@@ -126,19 +126,20 @@ export default function AddTransactionScreen({ navigation, route }) {
 
   useEffect(() => {
     Animated.spring(slideAnim, {
-      toValue: 0, useNativeDriver: true,
-      damping: 28, stiffness: 260, mass: 0.9,
+      toValue: 0,
+      useNativeDriver: true,
+      damping: 26,
+      stiffness: 240,
+      mass: 0.9,
     }).start();
   }, []);
 
+  // ── Handlers ──────────────────────────────────────────────────────────
+
+
   const handleClose = (onDone) => {
-    Animated.spring(slideAnim, {
-      toValue: SCREEN_H, useNativeDriver: true,
-      damping: 24, stiffness: 220, mass: 0.8
-    }).start(() => {
-      if (onDone) onDone();
-      navigation.goBack();
-    });
+    if (onDone) onDone();
+    navigation.goBack();
   };
 
   useEffect(() => {
@@ -208,13 +209,20 @@ export default function AddTransactionScreen({ navigation, route }) {
       showError('📅', 'Invalid Date', 'Please check the date and time fields — something looks off.');
       return;
     }
+    
+    // Prevent JS date rollover (e.g. Feb 31st -> Mar 3rd)
+    const builtDateObj = new Date(yr, mo, d, hr, min, 0);
+    if (builtDateObj.getDate() !== d || builtDateObj.getMonth() !== mo || builtDateObj.getFullYear() !== yr) {
+      showError('📅', 'Invalid Date', 'That date does not exist on the calendar. Please check again.');
+      return;
+    }
 
     if (category === 'others' && customCategory.trim() === '') {
       showError('🏷️', 'Name Required', 'Please enter a name for your custom "Others" category.');
       return;
     }
 
-    const builtDate   = new Date(yr, mo, d, hr, min, 0).toISOString();
+    const builtDate   = builtDateObj.toISOString();
     const isCustom    = category.startsWith('custom_');
     const finalCatId  = isCustom ? 'others' : category;
     const finalCustom = isCustom ? customCategory : (category === 'others' ? customCategory.trim() : '');

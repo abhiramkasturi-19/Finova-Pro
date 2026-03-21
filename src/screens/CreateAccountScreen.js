@@ -69,6 +69,14 @@ const TERMS_SECTIONS = [
     ],
   },
   {
+    icon: '⚖️',
+    heading: 'No Liability & Disclaimer',
+    body: [
+      'Finova is a personal project provided "as-is" without any warranties. The developer assumes no liability for any financial decisions, data loss, or legal damages resulting from the use of this app.',
+      'This app is not a certified financial tool. By using Finova, you agree that you are solely responsible for your financial tracking, data management, and usage.',
+    ],
+  },
+  {
     heading: 'Copyright & Intellectual Property',
     body: [
       '© 2026 Abhiram Kasturi. All rights reserved. Finova, its name, design, logo, codebase, and all associated assets are the exclusive intellectual property of the developer.',
@@ -131,7 +139,7 @@ function TermsModal({ visible, onClose }) {
             ))}
             <View style={modal.footerNote}>
               <Text style={modal.footerText}>
-                Last updated · March 2026 · Finova v2.8{'\n'}© 2026 Abhiram Kasturi. All rights reserved.
+                Last updated · March 21, 2026 · Finova v3.0.2{'\n'}© 2026 Abhiram Kasturi. All rights reserved.
               </Text>
             </View>
             <View style={{ height: 8 }} />

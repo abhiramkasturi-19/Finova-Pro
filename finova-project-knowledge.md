@@ -197,9 +197,12 @@ Profile card view mode shows **👑 PRO badge** if `isPro`. Active wallet name s
 - Version: `3.0.0`
 - Wallets row → navigates to `WalletsScreen`
 - App Guide row → navigates to `AppGuide`
-- "👑 Upgrade to Pro — ₹199 →" row — visible only to free users
+- "👑 Upgrade to Pro — ₹49 →" row — visible only to free users
 
 **executeClear** preserves: `name`, `age`, `currency`, `darkMode`, `profileImage`, `isPro`, `appLockEnabled`, `appLockPin`, `wallets`, `activeWalletId`, `customCategories`.
+
+**Layout/Styling:**
+- ScrollView `contentContainerStyle` uses `paddingBottom: 100` to guarantee the bottom list items clear the custom tab bar completely.
 
 **Logout Options:**
 The `LogoutModal` renders 3 explicit paths (Log Out + Download, Log Out without Download). Free users interacting with the Download option are aggressively routed through to the ProPaywall.
@@ -262,7 +265,7 @@ Vertical column containing Two Stacked Cards:
   "Current" marker
 
 [Pro Card] (Gold accented)
-  ₹49 one-time limited offer (₹199 crossed out) + "LIMITED TIME" badge
+  ₹49 one-time limited offer + "LIMITED TIME" badge
   5 Pro Features
   "Unlock Pro" CTA
 
@@ -478,7 +481,7 @@ Wallet switch:
 
 ## 15. ENCRYPTION (Passcode Export)
 
-XOR encryption — sufficient for ₹199 app privacy. Not military-grade but acceptable.
+XOR encryption — sufficient for ₹49 app privacy. Not military-grade but acceptable.
 
 ```js
 // Encrypt: returns 'FINOVA_ENC:<hex>' or null
@@ -588,7 +591,7 @@ function decryptJson(encStr, password) {
 | 181 | Instant close transitions removed `Animated.spring` on exit for Wallets, AppGuide, ProPaywall | Multiple files |
 | 182 | DataInfoScreen onboarding features updated to include new Encrypt & Privacy emphasis | DataInfoScreen.js |
 | 183 | LogoutModal explicitly shows 3 distinct options, routing Free users to Paywall on 'Download' | SettingsScreen.js |
-| 184 | ProPaywall pricing updated to visually reflect ₹49 Limited Time Offer (₹199 strikethrough) | ProPaywallScreen.js |
+| 184 | ProPaywall pricing updated to visually reflect ₹49 Limited Time Offer | ProPaywallScreen.js |
 
 ---
 
@@ -746,10 +749,10 @@ PIN stored as plaintext in AsyncStorage (inside `@flo_data`). Not in secure stor
 28. **Never re-add custom crop modal.**
 29. **`darkColors.bg` is `'#222629'`.**
 30. **HomeScreen rows are tappable** — TouchableOpacity wrapping.
-31. **Stats filters: `['Week','Month','3 Month','6 Month','Year']`.**
+31. **Stats filters: `['Week','Month','3 Month','6 Month','Year']`.** Month view graphs map every day of the month explicitly (30/31 days) but restrict label steps (`n <= 31 ? 2 : Math.max(1, Math.ceil(n / 10))`) to display precisely ~15 axes points.
 32. **Version is `3.0.0`.**
 33. **Negative SafeAreaView padding is intentional** — `paddingTop:-50`, `paddingBottom:-100`.
-34. **AppGuide spring stiffness is `240`** — not `24`.
+34. **AppGuide, AddTransaction, and Wallets screen spring stiffness is `240`**. They all explicitly utilize `panDownManual` preset in Navigation, paired with an internal `Animated.View` spring slide-up and instantaneous `goBack()` exit to eliminate transit lag.
 35. **`addCustomCategory` returns `'limit_reached'` or `'ok'`** — callers must check return value.
 36. **`addWallet` returns `'requires_pro'` or `'ok'`** — callers must check return value.
 37. **`isPro: false` is free mode. `isPro: true` is Pro.** No other states.
@@ -761,6 +764,8 @@ PIN stored as plaintext in AsyncStorage (inside `@flo_data`). Not in secure stor
 43. **Default wallet `id:'default'` cannot be deleted or archived.**
 44. **Delete wallet migrates its transactions to `'default'`.**
 45. **Always run `npx expo start --clear` after dropping in new files** — Metro cache causes EventEmitter crash otherwise.
+46. **Terms & Conditions in CreateAccountScreen must always include the "Last updated March 2026" text to ensure legal timeline consistency.**
+47. **No OS Alerts:** Never utilize native `Alert.alert` for success, error, or confirmation boundaries. Use standard `MessageModal` or `RestoreConfirmModal` custom overlays in `SettingsScreen` and `LoginScreen`.
 
 ---
 

@@ -142,11 +142,33 @@ function DecryptModal({ visible, onCancel, onDecrypt }) {
   );
 }
 
+// ─── Message Modal ────────────────────────────────────────────────────────────
+function MessageModal({ visible, type, title, message, onOk }) {
+  const isError = type === 'error';
+  const ringStyle = isError ? cm.iconRingDanger : cm.iconRing;
+  const icon = isError ? '⚠️' : '✅';
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onOk}>
+      <View style={[cm.backdrop, { justifyContent: 'center', padding: 28 }]}>
+        <View style={[cm.sheet, { borderRadius: 28, paddingBottom: 28, width: '100%', paddingTop: 28 }]}>
+          <View style={ringStyle}><Text style={cm.iconEmoji}>{icon}</Text></View>
+          <Text style={cm.title}>{title}</Text>
+          <Text style={cm.body}>{message}</Text>
+          <TouchableOpacity style={[cm.primaryBtn, { width: '100%', marginBottom: 0 }]} onPress={onOk}>
+            <Text style={cm.primaryBtnText}>Okay</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function LoginScreen({ navigation }) {
   const { importData } = useApp();
   const [loading, setLoading] = useState(false);
   const [decryptOpen, setDecryptOpen] = useState(false);
   const [pendingEnc,  setPendingEnc ] = useState('');
+  const [messageModal, setMessageModal] = useState(null);
 
   const finalizeImport = async (data) => {
     importData(data);
@@ -181,7 +203,7 @@ export default function LoginScreen({ navigation }) {
 
     } catch (err) {
       setLoading(false);
-      Alert.alert('Login Failed', 'Make sure you\'re using a valid Finova backup file (.json, .enc, or .csv).');
+      setMessageModal({ type: 'error', title: 'Login Failed', message: 'Make sure you\'re using a valid Finova backup file (.json, .enc, or .csv).' });
     }
   };
 
@@ -220,6 +242,13 @@ export default function LoginScreen({ navigation }) {
         </View>
       </ImageBackground>
       <DecryptModal visible={decryptOpen} onCancel={() => setDecryptOpen(false)} onDecrypt={onDecrypt} />
+      <MessageModal
+        visible={!!messageModal}
+        type={messageModal?.type}
+        title={messageModal?.title}
+        message={messageModal?.message}
+        onOk={() => setMessageModal(null)}
+      />
     </View>
   );
 }
@@ -250,6 +279,7 @@ const cm = StyleSheet.create({
   sheet:        { backgroundColor: '#2C3020', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 28, borderWidth: 1, borderColor: 'rgba(174,183,132,0.18)' },
   handle:       { width: 38, height: 4, borderRadius: 2, backgroundColor: 'rgba(174,183,132,0.35)', alignSelf: 'center', marginTop: 12, marginBottom: 24 },
   iconRing:     { alignSelf: 'center', width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(174,183,132,0.12)', borderWidth: 1.5, borderColor: 'rgba(174,183,132,0.30)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  iconRingDanger: { backgroundColor: 'rgba(158,90,90,0.15)', borderColor: 'rgba(158,90,90,0.35)' },
   iconEmoji:    { fontSize: 28 },
   title:        { fontFamily: 'Fungis-Heavy', fontSize: 22, color: '#FFFFFF', textAlign: 'center', marginBottom: 12 },
   body:         { fontFamily: 'Fungis-Regular', fontSize: 13, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 21, marginBottom: 24 },

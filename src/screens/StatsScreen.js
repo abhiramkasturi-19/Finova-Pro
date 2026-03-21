@@ -62,7 +62,7 @@ function DualLineChart({ incomePoints, expensePoints, width, height = 200, color
   const expPath = buildPath(expensePoints);
   const incArea = buildArea(incomePoints);
   const expArea = buildArea(expensePoints);
-  const labelStep = Math.max(1, Math.ceil(n / 10));
+  const labelStep = n <= 12 ? 1 : (n <= 31 ? 2 : Math.max(1, Math.ceil(n / 10)));
 
   return (
     <Svg width={width} height={height}>
@@ -169,7 +169,7 @@ export default function StatsScreen() {
           const d = new Date(t.date);
           return t.type === type && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === day;
         }).reduce((s, t) => s + t.amount, 0);
-        return { label: day % 5 === 1 ? `${day}` : '', v };
+        return { label: `${day}`, v };
       });
     }
     if (activeFilter === '3 Month') {

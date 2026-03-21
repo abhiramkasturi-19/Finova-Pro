@@ -15,7 +15,7 @@ const DATA_FEATURES = [
   {
     icon: '🔒',
     title: 'Privacy First',
-    desc: 'All your financial data is stored locally. We never see it, track it, or sell it.',
+    desc: 'All your financial data is stored locally. We never see it, track it, or sell it. Your account is essentially your JSON backup file.',
   },
   {
     icon: '📤',
